@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TARGET 1900 単語帳</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:     #0f1318;
+    --card:   #1a1f27;
+    --border: #2d3340;
+    --accent: #4fa3e8;
+    --warm:   #e07b50;
+    --gold:   #c9952a;
+    --text:   #dde4ef;
+    --dim:    #7a8494;
+    --faint:  #3a4150;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    /* システムフォント — ネットワーク不要 */
+    font-family: -apple-system, BlinkMacSystemFont,
+      'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+      'Yu Gothic', 'Meiryo', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* ── ヘッダー（backdrop-filter なし→ベタ塗り）── */
+  .hdr {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 50px;
+    background: var(--bg);          /* ← ぼかし廃止 */
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px;
+    z-index: 20;
+  }
+  .logo { font-size: 14px; font-weight: 700; letter-spacing: 0.12em; color: var(--gold); }
+  .ctr  { font-size: 14px; color: var(--dim); }
+  .ctr b { color: var(--accent); font-weight: 600; }
+
+  /* ── プログレスバー ── */
+  .prog-rail {
+    position: fixed; top: 50px; left: 0; right: 0;
+    height: 2px; background: var(--border); z-index: 20;
+  }
+  .prog-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--warm));
+    transition: width .3s ease;
+  }
+
+  /* ── ビューポート ── */
+  .vp {
+    position: fixed;
+    top: 52px; bottom: 90px;
+    left: 0; right: 0;
+    overflow: hidden;
+  }
+
+  /* ── カードスロット（3枚: 上・現在・下）── */
+  .card {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 14px;
+    /* transition は JS で on/off */
+  }
+
+  /* ── カード本体 ── */
+  .card-box {
+    width: 100%; max-width: 420px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,.35);
+  }
+
+  /*
+   * ── 横スライドパネル ──
+   *
+   * 3枚のパネルを横1列に並べ、.panels を translateX で動かすだけ。
+   * 以前の「4要素それぞれにCSS transition」から
+   * 「要素1つをtranslateX」に変更 → GPU負荷 1/4 以下
+   */
+  .panels {
+    display: flex;
+    width: 300%;   /* 3パネル分 */
+    /* transition は JS で付け外し */
+  }
+
+  .panel {
+    width: 33.333%;        /* = card-box の幅 */
+    padding: 28px 22px 24px;
+    min-height: 290px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* ── パネル0: 英単語 ── */
+  .num-badge { font-size: 11px; color: var(--faint); letter-spacing: 0.16em; margin-bottom: 12px; }
+  .phonetic  { font-size: 17px; color: var(--accent); font-style: italic; margin-bottom: 8px; }
+  .word-en   { font-size: 48px; font-weight: 800; line-height: 1.0; letter-spacing: -0.02em; margin-bottom: 10px; }
+  .pos-chip  {
+    display: inline-block;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    background: var(--accent); color: #0f1318;
+    padding: 3px 10px; border-radius: 20px;
+  }
+
+  /* ── パネル1: 意味 ── */
+  .meaning-main { font-size: 28px; font-weight: 600; color: var(--gold); line-height: 1.3; margin-bottom: 10px; }
+  .meaning-note { font-size: 14px; color: var(--dim); line-height: 1.6; }
+  .ref-word     { font-size: 17px; color: var(--faint); font-style: italic; margin-top: 14px; }
+
+  /* ── パネル2: 例文（英語＋和訳を1枚にまとめる）── */
+  .panel-lbl { font-size: 10px; letter-spacing: 0.14em; color: var(--faint); margin-bottom: 14px; text-transform: uppercase; }
+  .ex-en {
+    font-size: 20px; font-style: italic;
+    color: var(--text); line-height: 1.75;
+    margin-bottom: 14px;
+  }
+  .ex-en .hl { color: var(--warm); font-style: normal; font-weight: 700; }
+  .ex-jp {
+    font-size: 14px; color: var(--dim); line-height: 1.7;
+    border-left: 2px solid var(--faint); padding-left: 12px;
+  }
+
+  /* ── ヒント行 ── */
+  .hints { display: flex; justify-content: space-between; margin-top: 18px; }
+  .hint  { font-size: 11px; color: var(--faint); }
+
+  /* ── モードドット ── */
+  .dot-row { display: flex; gap: 7px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); transition: background .15s; }
+  .dot.on { background: var(--accent); transform: scale(1.25); }
+
+  /* ── ボトムバー（backdrop-filter なし→ベタ塗り）── */
+  .bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 90px;
+    background: var(--bg);          /* ← ぼかし廃止 */
+    border-top: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 9px; padding: 0 14px;
+    z-index: 20;
+  }
+  .btn-row { display: flex; gap: 10px; width: 100%; }
+  .btn {
+    flex: 1; height: 42px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--dim); font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: background .1s;
+  }
+  .btn:active { background: var(--border); }
+  .btn.prev  { color: var(--warm); border-color: #3a2418; }
+  .btn.next  { color: var(--accent); border-color: #1a3050; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <span class="logo">TARGET 1900</span>
+  <span class="ctr"><b id="cur">1</b> / <span id="total">10</span></span>
+</div>
+<div class="prog-rail"><div class="prog-fill" id="prog"></div></div>
+
+<div class="vp" id="vp"></div>
+
+<div class="bar">
+  <div class="dot-row" id="dots">
+    <div class="dot on"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn prev" onclick="move(-1)">← 前の単語</button>
+    <button class="btn next" onclick="move(1)">次の単語 →</button>
+  </div>
+</div>
+
+<script>
+/* ─────────── 単語データ（1〜10）─────────── */
+const words = [
+  { num:1,  en:"agree",    ph:"/əˈɡriː/",      pos:"動詞",      jp:"同意する・賛成する",         note:"agree with … 「〜に同意する」",              ex_en:"I <b>agree</b> with you on that point.",                        ex_jp:"その点についてはあなたに同意します。" },
+  { num:2,  en:"allow",    ph:"/əˈlaʊ/",        pos:"動詞",      jp:"許可する・認める",           note:"allow O to do 「Oが〜するのを許す」",         ex_en:"My parents <b>allow</b> me to stay out until midnight.",        ex_jp:"両親は私が真夜中まで外出することを許可しています。" },
+  { num:3,  en:"cause",    ph:"/kɔːz/",         pos:"動詞・名詞", jp:"引き起こす・原因",           note:"cause O to do 「Oに〜させる」",               ex_en:"The storm <b>caused</b> serious damage to the town.",           ex_jp:"嵐は町に深刻な被害をもたらした。" },
+  { num:4,  en:"consider", ph:"/kənˈsɪdər/",    pos:"動詞",      jp:"〜を考慮する・みなす",       note:"consider doing 「〜することを検討する」",      ex_en:"We should <b>consider</b> all the options before deciding.",    ex_jp:"決める前に全ての選択肢を考慮すべきだ。" },
+  { num:5,  en:"expect",   ph:"/ɪkˈspekt/",     pos:"動詞",      jp:"期待する・予期する",         note:"expect O to do 「Oが〜すると期待する」",      ex_en:"I <b>expect</b> him to arrive by noon.",                       ex_jp:"彼が正午までに到着すると思っています。" },
+  { num:6,  en:"find",     ph:"/faɪnd/",        pos:"動詞",      jp:"見つける・〜だとわかる",     note:"find O C 「OがCだとわかる」",                 ex_en:"She <b>found</b> the book on the shelf.",                      ex_jp:"彼女は本棚に本を見つけた。" },
+  { num:7,  en:"force",    ph:"/fɔːrs/",        pos:"動詞・名詞", jp:"強制する・力",               note:"force O to do 「Oに〜することを強制する」",   ex_en:"The rain <b>forced</b> us to cancel the picnic.",              ex_jp:"雨のせいでピクニックを中止せざるを得なかった。" },
+  { num:8,  en:"get",      ph:"/ɡet/",          pos:"動詞",      jp:"得る・〜させる・〜になる",   note:"get O to do / get O done",                    ex_en:"I'll <b>get</b> my hair cut this weekend.",                    ex_jp:"今週末に髪を切ってもらうつもりです。" },
+  { num:9,  en:"help",     ph:"/help/",         pos:"動詞・名詞", jp:"助ける・手伝う",             note:"help O (to) do 「Oが〜するのを助ける」",      ex_en:"Can you <b>help</b> me carry these boxes?",                   ex_jp:"これらの箱を運ぶのを手伝ってもらえますか？" },
+  { num:10, en:"keep",     ph:"/kiːp/",         pos:"動詞",      jp:"保つ・〜し続ける",           note:"keep O C / keep doing 「〜し続ける」",        ex_en:"Please <b>keep</b> the door closed while the AC is on.",       ex_jp:"エアコンをつけている間はドアを閉めておいてください。" },
+];
+
+/* ─────────── 状態 ─────────── */
+const N = words.length;
+let cur  = 0;   // 現在の単語インデックス
+let mode = 0;   // 0=単語 1=意味 2=例文
+let busy = false;
+
+const vp   = document.getElementById('vp');
+const dots = document.querySelectorAll('#dots .dot');
+
+// slots[0]=前, [1]=現在, [2]=次
+const slots = [null, null, null];
+
+/* ─────────── ユーティリティ ─────────── */
+function hl(s) {
+  return s.replace(/<b>/g, '<span class="hl">').replace(/<\/b>/g, '</span>');
+}
+
+/* カード要素を生成（DOM に append はしない）*/
+function mkCard(wi) {
+  if (wi < 0 || wi >= N) return null;
+  const w   = words[wi];
+  const num = String(w.num).padStart(3, '0');
+  const el  = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = `
+    <div class="card-box">
+      <div class="panels">
+
+        <!-- パネル0: 英単語 -->
+        <div class="panel">
+          <div class="num-badge">No.${num}</div>
+          <div class="phonetic">${w.ph}</div>
+          <div class="word-en">${w.en}</div>
+          <div class="pos-chip">${w.pos}</div>
+          <div class="hints">
+            <span class="hint">↑↓ 単語を切替</span>
+            <span class="hint">→ 意味を見る</span>
+          </div>
+        </div>
+
+        <!-- パネル1: 意味 -->
+        <div class="panel">
+          <div class="num-badge">No.${num} — 意味</div>
+          <div class="meaning-main">${w.jp}</div>
+          <div class="meaning-note">${w.note}</div>
+          <div class="ref-word">${w.en}</div>
+          <div class="hints">
+            <span class="hint">← 単語に戻る</span>
+            <span class="hint">→ 例文を見る</span>
+          </div>
+        </div>
+
+        <!-- パネル2: 例文（英語＋和訳を1枚にまとめた）-->
+        <div class="panel">
+          <div class="panel-lbl">例文</div>
+          <div class="ex-en">${hl(w.ex_en)}</div>
+          <div class="ex-jp">${w.ex_jp}</div>
+          <div class="hints" style="margin-top:14px">
+            <span class="hint">← 意味に戻る</span>
+            <span class="hint"></span>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+  return el;
+}
+
+/* カードを transition なしで指定位置に配置 */
+function snap(el, pos) {
+  el.style.transition   = 'none';
+  el.style.transform    = pos === 'above' ? 'translateY(-100%)' :
+                          pos === 'below' ? 'translateY(100%)' : 'translateY(0)';
+  el.style.opacity      = pos === 'center' ? '1' : '0';
+  el.style.pointerEvents = pos === 'center' ? 'auto' : 'none';
+}
+
+/* .panels を transition なし or ありで動かす */
+function slidePanels(el, m, animate) {
+  const p = el.querySelector('.panels');
+  if (!p) return;
+  p.style.transition = animate
+    ? 'transform .26s cubic-bezier(.25,.46,.45,.94)'
+    : 'none';
+  p.style.transform = `translateX(${-m * 33.333}%)`;
+}
+
+/* ─────────── 初期化 ─────────── */
+function init() {
+  vp.innerHTML = '';
+  const prev = mkCard(cur - 1);
+  const curr = mkCard(cur);
+  const next = mkCard(cur + 1);
+
+  if (prev) { vp.appendChild(prev); snap(prev, 'above'); }
+  vp.appendChild(curr);          snap(curr, 'center');
+  if (next) { vp.appendChild(next); snap(next, 'below'); }
+
+  slots[0] = prev ? { el: prev, wi: cur - 1 } : null;
+  slots[1] = { el: curr, wi: cur };
+  slots[2] = next ? { el: next, wi: cur + 1 } : null;
+
+  syncUI();
+}
+
+/* ─────────── UI同期 ─────────── */
+function syncUI() {
+  document.getElementById('cur').textContent = cur + 1;
+  document.getElementById('prog').style.width = ((cur + 1) / N * 100) + '%';
+  dots.forEach((d, i) => d.classList.toggle('on', i === mode));
+}
+
+/* ─────────── 横スライド（モード切替）─────────── */
+function setMode(m) {
+  m = Math.max(0, Math.min(2, m));
+  if (m === mode) return;
+  mode = m;
+  if (slots[1]) slidePanels(slots[1].el, mode, true);
+  dots.forEach((d, i) => d.classList.toggle('on', i === mode));
+}
+
+/* ─────────── 縦スワイプ（単語切替）─────────── */
+function move(dir) {
+  if (busy) return;
+  const next = cur + dir;
+  if (next < 0 || next >= N) return;
+  busy = true;
+
+  const fromSlot = slots[1];
+  const toSlot   = dir > 0 ? slots[2] : slots[0];
+
+  /* 出ていくカードのパネルを即リセット */
+  if (fromSlot) slidePanels(fromSlot.el, 0, false);
+
+  if (!toSlot) { busy = false; return; }
+
+  const fromEl = fromSlot.el;
+  const toEl   = toSlot.el;
+
+  /* 入ってくるカードを待機位置に固定 */
+  snap(toEl, dir > 0 ? 'below' : 'above');
+
+  /* 2フレーム後にアニメーション開始（transition: none が確実に効いてから）*/
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const T = 'transform .28s cubic-bezier(.25,.46,.45,.94), opacity .2s';
+      fromEl.style.transition = T;
+      toEl.style.transition   = T;
+
+      fromEl.style.transform    = dir > 0 ? 'translateY(-100%)' : 'translateY(100%)';
+      fromEl.style.opacity      = '0';
+      fromEl.style.pointerEvents = 'none';
+
+      toEl.style.transform    = 'translateY(0)';
+      toEl.style.opacity      = '1';
+      toEl.style.pointerEvents = 'auto';
+    });
+  });
+
+  /* アニメーション完了後にスロットを組み替える */
+  setTimeout(() => {
+    cur  = next;
+    mode = 0;
+
+    if (dir > 0) {
+      if (slots[0]) slots[0].el.remove();
+      slots[0] = slots[1];
+      slots[1] = slots[2];
+
+      snap(slots[0].el, 'above');  /* 旧カレントを上に退避 */
+
+      const newEl = mkCard(next + 1);
+      if (newEl) { vp.appendChild(newEl); snap(newEl, 'below'); slots[2] = { el: newEl, wi: next + 1 }; }
+      else slots[2] = null;
+
+    } else {
+      if (slots[2]) slots[2].el.remove();
+      slots[2] = slots[1];
+      slots[1] = slots[0];
+
+      snap(slots[2].el, 'below');  /* 旧カレントを下に退避 */
+
+      const newEl = mkCard(next - 1);
+      if (newEl) { vp.appendChild(newEl); snap(newEl, 'above'); slots[0] = { el: newEl, wi: next - 1 }; }
+      else slots[0] = null;
+    }
+
+    /* 新カレントを確実に中央固定 */
+    const c = slots[1].el;
+    c.style.transition    = 'none';
+    c.style.transform     = 'translateY(0)';
+    c.style.opacity       = '1';
+    c.style.pointerEvents = 'auto';
+    slidePanels(c, 0, false);
+
+    busy = false;
+    syncUI();
+  }, 300);
+}
+
+/* ─────────── タッチ操作 ─────────── */
+let tx = 0, ty = 0, tt = 0, axis = null, dragging = false;
+
+vp.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) return;
+  tx = e.touches[0].clientX;
+  ty = e.touches[0].clientY;
+  tt = Date.now();
+  dragging = true; axis = null;
+}, { passive: true });
+
+vp.addEventListener('touchmove', e => {
+  if (!dragging) return;
+  const dx = e.touches[0].clientX - tx;
+  const dy = e.touches[0].clientY - ty;
+  if (!axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+    axis = Math.abs(dy) > Math.abs(dx) * 1.2 ? 'v' : 'h';
+  }
+  if (axis === 'h') e.preventDefault();
+}, { passive: false });
+
+vp.addEventListener('touchend', e => {
+  if (!dragging) return;
+  dragging = false;
+  if (Date.now() - tt > 500) return;
+  const dx = e.changedTouches[0].clientX - tx;
+  const dy = e.changedTouches[0].clientY - ty;
+  if (axis === 'v' && Math.abs(dy) > 50) move(dy < 0 ? 1 : -1);
+  if (axis === 'h' && Math.abs(dx) > 35) setMode(mode + (dx < 0 ? 1 : -1));
+  axis = null;
+});
+
+/* ─────────── マウス（デスクトップ）─────────── */
+let mx = 0, my = 0, maxis = null, mdown = false;
+vp.addEventListener('mousedown', e => { mdown = true; mx = e.clientX; my = e.clientY; maxis = null; });
+vp.addEventListener('mousemove', e => {
+  if (!mdown) return;
+  const dx = e.clientX - mx, dy = e.clientY - my;
+  if (!maxis && (Math.abs(dx) > 6 || Math.abs(dy) > 6))
+    maxis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+});
+vp.addEventListener('mouseup', e => {
+  if (!mdown) return; mdown = false;
+  const dx = e.clientX - mx, dy = e.clientY - my;
+  if (maxis === 'v' && Math.abs(dy) > 40) move(dy < 0 ? 1 : -1);
+  if (maxis === 'h' && Math.abs(dx) > 35) setMode(mode + (dx < 0 ? 1 : -1));
+  maxis = null;
+});
+
+/* ─────────── キーボード ─────────── */
+document.addEventListener('keydown', e => {
+  if      (e.key === 'ArrowDown')  move(1);
+  else if (e.key === 'ArrowUp')    move(-1);
+  else if (e.key === 'ArrowRight') setMode(mode + 1);
+  else if (e.key === 'ArrowLeft')  setMode(mode - 1);
+});
+
+/* ─────────── 起動 ─────────── */
+init();
+</script>
+</body>
+</html>
