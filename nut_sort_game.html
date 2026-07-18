@@ -11,7 +11,9 @@
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{
-    margin:0; padding:0; height:100%;
+    margin:0; padding:0;
+    height:100%;
+    height:100dvh; /* actual visible viewport on mobile Safari, where 100% can exceed it while the toolbar is shown */
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
     overflow:hidden;
     touch-action:manipulation;
@@ -97,7 +99,9 @@
     align-content:center;
     gap:4px 0;
     padding:10px 0;
-    overflow:auto;
+    overflow:visible;
+    transform-origin:50% 50%;
+    transition:transform .15s ease;
   }
   .peg{
     width:100px;
@@ -369,18 +373,20 @@ const PALETTE = [
   {light:'#cfd8dc', dark:'#78909c'}, // silver
   {light:'#4dd0c8', dark:'#00695c'}, // teal
   {light:'#ef5350', dark:'#b71c1c'}, // red
+  {light:'#c6e05c', dark:'#7c9c1f'}, // lime
+  {light:'#7986cb', dark:'#303f9c'}, // indigo
 ];
 
 // Empty pegs are the only "workspace" the player has to temporarily park a
 // nut, and empirically this puzzle needs at least 2 to stay reliably
 // solvable as the color count grows (with only 1, boards become very often
 // literally unsolvable once past ~5 colors). So difficulty is tuned purely
-// through how many colors are in play and how fast that ramps up, while
-// always keeping a 2-peg buffer.
+// through how many colors are in play and how fast that ramps up, capped at
+// PALETTE.length (12), while always keeping a 2-peg buffer.
 const DIFFICULTIES = {
-  normal:  { label:'ノーマル',       baseColors:3, colorsEvery:2, emptyPegs:2 },
-  hard:    { label:'ハード',         baseColors:5, colorsEvery:2, emptyPegs:2 },
-  extreme: { label:'エクストリーム', baseColors:6, colorsEvery:1, emptyPegs:2 }
+  normal:  { label:'ノーマル',       baseColors:4, colorsEvery:1, emptyPegs:2 },
+  hard:    { label:'ハード',         baseColors:6, colorsEvery:1, emptyPegs:2 },
+  extreme: { label:'エクストリーム', baseColors:8, colorsEvery:1, emptyPegs:2 }
 };
 
 let difficulty = 'normal';
@@ -896,7 +902,29 @@ function render(){
 
     boardEl.appendChild(pegEl);
   });
+
+  fitBoard();
 }
+
+// Peg count varies a lot with difficulty (up to 12 colors + 2 empty = 14
+// pegs), and on tall/narrow phones that can need more vertical space than
+// the screen has. Rather than letting the board scroll internally (which is
+// what caused nuts near the bottom to be unreachable without scrolling on
+// an iPhone), shrink the whole grid down uniformly so every peg is always
+// visible and reachable in one screen.
+const boardPanelEl = document.querySelector('.board-panel');
+function fitBoard(){
+  const availW = boardPanelEl.clientWidth;
+  const availH = boardPanelEl.clientHeight;
+  if(availW===0 || availH===0) return;
+  const pegW = 100, pegH = 216, rowGap = 4, vPad = 20;
+  const columns = Math.max(1, Math.floor(availW / pegW));
+  const rows = Math.max(1, Math.ceil(pegs.length / columns));
+  const neededH = rows*pegH + (rows-1)*rowGap + vPad;
+  const scale = Math.min(1, availH / neededH) * 0.98;
+  boardEl.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', fitBoard);
 
 function startGame(diffKey){
   difficulty = diffKey;
