@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ナットそろえパズル</title>
+<title>ナットそろえパズル（4列固定）</title>
 <style>
   :root{
     --bg-top:#0d0630;
@@ -94,17 +94,16 @@
     position:absolute;
     inset:0;
     display:grid;
-    grid-template-columns:repeat(auto-fit, 100px);
-    justify-content:center;
+    grid-template-columns:repeat(4, 1fr); /* always exactly 4 pegs per row, no side margins */
     align-content:center;
-    gap:4px 0;
-    padding:10px 0;
+    gap:4px 2px;
+    padding:10px 4px;
     overflow:visible;
     transform-origin:50% 50%;
     transition:transform .15s ease;
   }
   .peg{
-    width:100px;
+    width:100%;
     height:216px;
     position:relative;
     display:flex;
@@ -361,6 +360,7 @@
 
 <script>
 const CAPACITY = 4; // 1本のネジに4個のナット
+const GRID_COLUMNS = 4; // 1行に並べるボルトの本数を固定
 
 const PALETTE = [
   {light:'#ffe066', dark:'#e0a800'}, // yellow
@@ -906,20 +906,17 @@ function render(){
   fitBoard();
 }
 
-// Peg count varies a lot with difficulty (up to 12 colors + 2 empty = 14
-// pegs), and on tall/narrow phones that can need more vertical space than
-// the screen has. Rather than letting the board scroll internally (which is
-// what caused nuts near the bottom to be unreachable without scrolling on
-// an iPhone), shrink the whole grid down uniformly so every peg is always
-// visible and reachable in one screen.
+// The grid is always exactly GRID_COLUMNS wide, so with more pegs than fit
+// in one screen's worth of rows (up to 12 colors + 2 empty = 14 pegs), the
+// grid grows downward. Shrink the whole thing uniformly so every row stays
+// on screen without needing to scroll to reach the bottom pegs.
 const boardPanelEl = document.querySelector('.board-panel');
 function fitBoard(){
   const availW = boardPanelEl.clientWidth;
   const availH = boardPanelEl.clientHeight;
   if(availW===0 || availH===0) return;
-  const pegW = 100, pegH = 216, rowGap = 4, vPad = 20;
-  const columns = Math.max(1, Math.floor(availW / pegW));
-  const rows = Math.max(1, Math.ceil(pegs.length / columns));
+  const pegH = 216, rowGap = 4, vPad = 20;
+  const rows = Math.max(1, Math.ceil(pegs.length / GRID_COLUMNS));
   const neededH = rows*pegH + (rows-1)*rowGap + vPad;
   const scale = Math.min(1, availH / neededH) * 0.98;
   boardEl.style.transform = `scale(${scale})`;
