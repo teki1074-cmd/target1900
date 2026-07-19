@@ -233,6 +233,37 @@
     background:transparent;
     filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));
   }
+  @keyframes tanukiFallSpin{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(110vh) rotate(720deg); opacity:.3; }
+  }
+  @keyframes tanukiDriftSide{
+    0%{ transform:translate(0,0); opacity:1; }
+    100%{ transform:translate(var(--driftX,120px), 108vh); opacity:.3; }
+  }
+  @keyframes tanukiBounce{
+    0%{   transform:translateY(0)     scale(1,1);    opacity:1; }
+    8%{   transform:translateY(6vh)   scale(1.15,.82); }
+    16%{  transform:translateY(14vh)  scale(.88,1.16); }
+    30%{  transform:translateY(32vh)  scale(1.15,.82); }
+    44%{  transform:translateY(50vh)  scale(.88,1.16); }
+    58%{  transform:translateY(68vh)  scale(1.15,.82); }
+    72%{  transform:translateY(86vh)  scale(.88,1.16); }
+    100%{ transform:translateY(108vh) scale(1,1);    opacity:.3; }
+  }
+  @keyframes tanukiCenterGrow{
+    0%{   transform:translate(-50%,-50%) scale(.5); opacity:0; }
+    20%{  opacity:1; }
+    75%{  transform:translate(-50%,-50%) scale(3);   opacity:1; }
+    100%{ transform:translate(-50%,-50%) scale(3.8); opacity:0; }
+  }
+  .confetti-tanuki.motion-spin{ animation:tanukiFallSpin linear forwards; }
+  .confetti-tanuki.motion-side{ animation:tanukiDriftSide linear forwards; }
+  .confetti-tanuki.motion-bounce{ animation:tanukiBounce linear forwards; }
+  .confetti-tanuki.motion-grow{
+    top:50%; left:50%;
+    animation:tanukiCenterGrow ease-out forwards;
+  }
   #deadlockFlash{
     position:fixed; inset:0;
     background:rgba(255,20,20,.4);
@@ -247,6 +278,42 @@
     0%{ opacity:0; }
     18%{ opacity:1; }
     100%{ opacity:0; }
+  }
+  #deadlockTanuki{
+    position:fixed;
+    top:50%; left:50%;
+    width:300px; height:300px;
+    transform:translate(-50%,-50%) scale(.5);
+    opacity:0;
+    pointer-events:none;
+    z-index:61;
+    filter:drop-shadow(0 8px 22px rgba(0,0,0,.6));
+  }
+  #deadlockTanuki.show{
+    animation:deadlockTanukiPop .5s ease;
+  }
+  @keyframes deadlockTanukiPop{
+    0%{   opacity:0; transform:translate(-50%,-50%) scale(.5); }
+    25%{  opacity:1; transform:translate(-50%,-50%) scale(1.06); }
+    75%{  opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100%{ opacity:0; transform:translate(-50%,-50%) scale(.92); }
+  }
+  .tanuki-fountain{
+    position:absolute;
+    left:50%;
+    bottom:0;
+    width:90px;
+    height:111px;
+    border-radius:10px;
+    background:transparent;
+    filter:drop-shadow(0 3px 8px rgba(0,0,0,.4));
+    animation:tanukiFountain ease-out forwards;
+  }
+  @keyframes tanukiFountain{
+    0%{   transform:translate(-50%,0) scale(.4) rotate(0deg); opacity:0; }
+    12%{  opacity:1; }
+    50%{  transform:translate(calc(-50% + var(--fx,0px)), -68vh) scale(1) rotate(var(--frot,15deg)); opacity:1; }
+    100%{ transform:translate(calc(-50% + var(--fx2,0px)), -20vh) scale(.75) rotate(var(--frot2,30deg)); opacity:0; }
   }
   .card{
     background:linear-gradient(160deg,#2a1a5e,#150a38);
@@ -339,6 +406,7 @@
 </head>
 <body>
 <div id="deadlockFlash"></div>
+<img id="deadlockTanuki" alt="">
 <div id="app">
   <div class="topbar">
     <button class="icon-btn" id="resetBtn2" title="やり直す">↺</button>
@@ -490,6 +558,149 @@ const TANUKI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500
   <text x="200" y="495" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#5c3810" opacity="0.7">🍃 フサフサのタヌキ 🍃</text>
 </svg>`;
 const TANUKI_DATA_URI = `data:image/svg+xml,${encodeURIComponent(TANUKI_SVG)}`;
+
+// A sad, rain-soaked tanuki shown briefly when the player gets stuck.
+const TANUKI_SAD_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480" width="480" height="480">
+  <defs>
+    <filter id="fur" x="-15%" y="-15%" width="130%" height="130%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="furSoft" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="2" dy="4" stdDeviation="8" flood-color="#1a0f05" flood-opacity="0.4"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="tearBlur">
+      <feGaussianBlur stdDeviation="1.2"/>
+    </filter>
+    <filter id="softblur">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+    <radialGradient id="bgGrad" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#2a3040"/>
+      <stop offset="60%" stop-color="#161e28"/>
+      <stop offset="100%" stop-color="#080c10"/>
+    </radialGradient>
+    <radialGradient id="faceGrad" cx="48%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#b09070"/>
+      <stop offset="50%" stop-color="#7a5c3c"/>
+      <stop offset="100%" stop-color="#3e2a14"/>
+    </radialGradient>
+    <radialGradient id="maskGrad" cx="50%" cy="45%" r="58%">
+      <stop offset="0%" stop-color="#2a2010"/>
+      <stop offset="100%" stop-color="#0e0a04"/>
+    </radialGradient>
+    <radialGradient id="irisGrad" cx="42%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#b87808"/>
+      <stop offset="50%" stop-color="#7a4e06"/>
+      <stop offset="100%" stop-color="#2e1c00"/>
+    </radialGradient>
+    <linearGradient id="tearGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c8dff0" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#a0c8e8" stop-opacity="0.4"/>
+    </linearGradient>
+    <radialGradient id="noseGrad" cx="35%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#4a2020"/>
+      <stop offset="100%" stop-color="#100404"/>
+    </radialGradient>
+    <radialGradient id="muzzleGrad" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#d0b890"/>
+      <stop offset="100%" stop-color="#907860"/>
+    </radialGradient>
+    <linearGradient id="rainGrad" x1="0%" y1="0%" x2="10%" y2="100%">
+      <stop offset="0%" stop-color="#a0c0d8" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#a0c0d8" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#a0c0d8" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="480" fill="url(#bgGrad)" rx="20"/>
+  <ellipse cx="360" cy="70" rx="55" ry="48" fill="#404858" opacity="0.6" filter="url(#softblur)"/>
+  <circle cx="362" cy="68" r="30" fill="#c8ccd8" opacity="0.18" filter="url(#glow)"/>
+  <line x1="60" y1="0" x2="42" y2="480" stroke="url(#rainGrad)" stroke-width="1" opacity="0.4"/>
+  <line x1="120" y1="0" x2="102" y2="480" stroke="url(#rainGrad)" stroke-width="0.8" opacity="0.3"/>
+  <line x1="180" y1="0" x2="162" y2="480" stroke="url(#rainGrad)" stroke-width="1.2" opacity="0.35"/>
+  <line x1="250" y1="0" x2="232" y2="480" stroke="url(#rainGrad)" stroke-width="0.8" opacity="0.28"/>
+  <line x1="310" y1="0" x2="292" y2="480" stroke="url(#rainGrad)" stroke-width="1" opacity="0.32"/>
+  <line x1="370" y1="0" x2="352" y2="480" stroke="url(#rainGrad)" stroke-width="0.8" opacity="0.3"/>
+  <line x1="430" y1="0" x2="412" y2="480" stroke="url(#rainGrad)" stroke-width="1" opacity="0.38"/>
+  <line x1="90" y1="0" x2="72" y2="480" stroke="url(#rainGrad)" stroke-width="0.6" opacity="0.22"/>
+  <line x1="200" y1="0" x2="182" y2="480" stroke="url(#rainGrad)" stroke-width="0.6" opacity="0.2"/>
+  <line x1="340" y1="0" x2="322" y2="480" stroke="url(#rainGrad)" stroke-width="0.6" opacity="0.22"/>
+  <ellipse cx="122" cy="148" rx="52" ry="68" fill="#3a2a14" filter="url(#fur)" transform="rotate(-22 122 148)"/>
+  <ellipse cx="124" cy="152" rx="33" ry="44" fill="#6e5030" filter="url(#fur)" transform="rotate(-22 124 152)" opacity="0.85"/>
+  <ellipse cx="126" cy="155" rx="16" ry="22" fill="#b88858" filter="url(#fur)" transform="rotate(-22 126 155)" opacity="0.55"/>
+  <ellipse cx="358" cy="148" rx="52" ry="68" fill="#3a2a14" filter="url(#fur)" transform="rotate(22 358 148)"/>
+  <ellipse cx="356" cy="152" rx="33" ry="44" fill="#6e5030" filter="url(#fur)" transform="rotate(22 356 152)" opacity="0.85"/>
+  <ellipse cx="354" cy="155" rx="16" ry="22" fill="#b88858" filter="url(#fur)" transform="rotate(22 354 155)" opacity="0.55"/>
+  <ellipse cx="242" cy="282" rx="178" ry="162" fill="#0e0a04" opacity="0.35" filter="url(#softblur)"/>
+  <ellipse cx="240" cy="278" rx="175" ry="158" fill="url(#faceGrad)" filter="url(#fur)"/>
+  <ellipse cx="220" cy="200" rx="80" ry="40" fill="#a0b8c8" opacity="0.07" filter="url(#furSoft)" transform="rotate(-8 220 200)"/>
+  <ellipse cx="168" cy="260" rx="58" ry="42" fill="url(#maskGrad)" opacity="0.88" filter="url(#fur)"/>
+  <ellipse cx="312" cy="260" rx="58" ry="42" fill="url(#maskGrad)" opacity="0.88" filter="url(#fur)"/>
+  <ellipse cx="240" cy="264" rx="28" ry="16" fill="#7a6040" opacity="0.55"/>
+  <path d="M 130 228 Q 158 218 190 230" stroke="#1a1208" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.75" filter="url(#furSoft)"/>
+  <path d="M 290 230 Q 322 218 350 228" stroke="#1a1208" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.75" filter="url(#furSoft)"/>
+  <path d="M 206 232 Q 240 222 274 232" stroke="#1a1208" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.4"/>
+  <ellipse cx="168" cy="262" rx="28" ry="24" fill="#060402"/>
+  <ellipse cx="168" cy="263" rx="26" ry="22" fill="#e8dfc0" opacity="0.1"/>
+  <ellipse cx="169" cy="264" rx="22" ry="20" fill="url(#irisGrad)"/>
+  <ellipse cx="169" cy="265" rx="13" ry="14" fill="#040200"/>
+  <ellipse cx="312" cy="262" rx="28" ry="24" fill="#060402"/>
+  <ellipse cx="312" cy="263" rx="26" ry="22" fill="#e8dfc0" opacity="0.1"/>
+  <ellipse cx="311" cy="264" rx="22" ry="20" fill="url(#irisGrad)"/>
+  <ellipse cx="311" cy="265" rx="13" ry="14" fill="#040200"/>
+  <ellipse cx="162" cy="257" rx="5" ry="6" fill="white" opacity="0.6"/>
+  <ellipse cx="172" cy="271" rx="2.5" ry="2.5" fill="white" opacity="0.28"/>
+  <ellipse cx="306" cy="257" rx="5" ry="6" fill="white" opacity="0.6"/>
+  <ellipse cx="316" cy="271" rx="2.5" ry="2.5" fill="white" opacity="0.28"/>
+  <path d="M 142 248 Q 168 238 194 248 Q 185 255 168 254 Q 151 255 142 248 Z" fill="#3a2810" opacity="0.82" filter="url(#furSoft)"/>
+  <path d="M 286 248 Q 312 238 338 248 Q 329 255 312 254 Q 295 255 286 248 Z" fill="#3a2810" opacity="0.82" filter="url(#furSoft)"/>
+  <path d="M 144 278 Q 168 286 192 278" stroke="#1e1408" stroke-width="3" fill="none" opacity="0.45"/>
+  <path d="M 288 278 Q 312 286 336 278" stroke="#1e1408" stroke-width="3" fill="none" opacity="0.45"/>
+  <ellipse cx="145" cy="279" rx="7" ry="9" fill="url(#tearGrad)" opacity="0.82" filter="url(#tearBlur)"/>
+  <path d="M 148 287 Q 143 310 138 340 Q 134 365 130 385" stroke="#b0cce0" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M 148 287 Q 143 310 138 340 Q 134 365 130 385" stroke="#d8eaf8" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <ellipse cx="129" cy="390" rx="5" ry="7" fill="#b0cce0" opacity="0.5" filter="url(#tearBlur)"/>
+  <ellipse cx="335" cy="279" rx="7" ry="9" fill="url(#tearGrad)" opacity="0.82" filter="url(#tearBlur)"/>
+  <path d="M 332 287 Q 337 312 342 342 Q 346 367 350 387" stroke="#b0cce0" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M 332 287 Q 337 312 342 342 Q 346 367 350 387" stroke="#d8eaf8" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <ellipse cx="351" cy="392" rx="5" ry="7" fill="#b0cce0" opacity="0.5" filter="url(#tearBlur)"/>
+  <ellipse cx="122" cy="308" rx="48" ry="38" fill="#9a7850" opacity="0.45" filter="url(#fur)"/>
+  <ellipse cx="358" cy="308" rx="48" ry="38" fill="#9a7850" opacity="0.45" filter="url(#fur)"/>
+  <ellipse cx="240" cy="352" rx="62" ry="44" fill="url(#muzzleGrad)" filter="url(#fur)"/>
+  <ellipse cx="240" cy="340" rx="26" ry="34" fill="#c8a878" filter="url(#fur)" opacity="0.55"/>
+  <ellipse cx="240" cy="334" rx="20" ry="14" fill="url(#noseGrad)"/>
+  <ellipse cx="235" cy="330" rx="5.5" ry="3.5" fill="white" opacity="0.4"/>
+  <line x1="240" y1="334" x2="240" y2="348" stroke="#180606" stroke-width="2" opacity="0.5"/>
+  <ellipse cx="240" cy="350" rx="4" ry="6" fill="#c0d0c0" opacity="0.22" filter="url(#tearBlur)"/>
+  <path d="M 214 368 Q 228 360 240 362 Q 252 360 266 368" stroke="#5a3018" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.85"/>
+  <path d="M 214 368 Q 210 374 212 380" stroke="#5a3018" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M 266 368 Q 270 374 268 380" stroke="#5a3018" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <line x1="82" y1="345" x2="204" y2="358" stroke="#d8d0b0" stroke-width="1.2" opacity="0.65"/>
+  <line x1="74" y1="358" x2="204" y2="364" stroke="#d8d0b0" stroke-width="1.2" opacity="0.6"/>
+  <line x1="78" y1="372" x2="204" y2="370" stroke="#d8d0b0" stroke-width="1" opacity="0.5"/>
+  <line x1="398" y1="345" x2="276" y2="358" stroke="#d8d0b0" stroke-width="1.2" opacity="0.65"/>
+  <line x1="406" y1="358" x2="276" y2="364" stroke="#d8d0b0" stroke-width="1.2" opacity="0.6"/>
+  <line x1="402" y1="372" x2="276" y2="370" stroke="#d8d0b0" stroke-width="1" opacity="0.5"/>
+  <ellipse cx="175" cy="195" rx="3" ry="5" fill="#a0c0d8" opacity="0.35" transform="rotate(-15 175 195)"/>
+  <ellipse cx="295" cy="188" rx="2.5" ry="4" fill="#a0c0d8" opacity="0.3" transform="rotate(-15 295 188)"/>
+  <ellipse cx="130" cy="230" rx="2" ry="3.5" fill="#a0c0d8" opacity="0.28" transform="rotate(-15 130 230)"/>
+  <ellipse cx="350" cy="215" rx="2" ry="3.5" fill="#a0c0d8" opacity="0.28" transform="rotate(-15 350 215)"/>
+  <ellipse cx="240" cy="178" rx="3" ry="5" fill="#a0c0d8" opacity="0.32" transform="rotate(-15 240 178)"/>
+  <circle cx="80" cy="465" r="2" fill="#a0c0d8" opacity="0.4"/>
+  <circle cx="160" cy="472" r="1.5" fill="#a0c0d8" opacity="0.35"/>
+  <circle cx="320" cy="468" r="2" fill="#a0c0d8" opacity="0.38"/>
+  <circle cx="400" cy="460" r="1.5" fill="#a0c0d8" opacity="0.32"/>
+  <text x="240" y="468" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#8090a8" opacity="0.6">…しょんぼり…</text>
+</svg>`;
+const TANUKI_SAD_DATA_URI = `data:image/svg+xml,${encodeURIComponent(TANUKI_SAD_SVG)}`;
 
 // Empty pegs are the only "workspace" the player has to temporarily park a
 // nut, and empirically this puzzle needs at least 2 to stay reliably
@@ -710,74 +921,46 @@ function checkDeadlock(){
     flash.classList.remove('flash');
     void flash.offsetWidth; // restart the animation even if it's already mid-flash
     flash.classList.add('flash');
+
+    const sadImg = document.getElementById('deadlockTanuki');
+    sadImg.src = TANUKI_SAD_DATA_URI;
+    sadImg.classList.remove('show');
+    void sadImg.offsetWidth;
+    sadImg.classList.add('show');
   }
   wasStuck = stuck;
 }
 
-// -- synthesized sound effects (Web Audio API, no audio files needed) --
-let audioCtx = null;
-function getAudioCtx(){
-  if(!audioCtx){
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if(!Ctx) return null;
-    audioCtx = new Ctx();
-  }
-  if(audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-}
-
-function playTone(opts){
-  const ctx = getAudioCtx();
-  if(!ctx) return;
-  const {startFreq, endFreq, duration, type='sine', peakGain=0.4, filterStart, filterEnd, startTime=0}
-    = opts;
-  const t0 = ctx.currentTime + startTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(startFreq, t0);
-  osc.frequency.exponentialRampToValueAtTime(Math.max(endFreq,1), t0+duration);
-
-  let node = osc;
-  if(filterStart){
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(filterStart, t0);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(filterEnd,1), t0+duration);
-    osc.connect(filter);
-    node = filter;
-  }
-  node.connect(gain);
-  gain.connect(ctx.destination);
-  gain.gain.setValueAtTime(0.0001, t0);
-  gain.gain.exponentialRampToValueAtTime(peakGain, t0+duration*0.15);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t0+duration);
-  osc.start(t0);
-  osc.stop(t0+duration+0.02);
-}
+// -- sound effects: real mp3 files, loaded relative to this html file --
+const grabAudio = new Audio(encodeURI('MP3/grab.mp3'));
+const putAudio = new Audio(encodeURI('MP3/put.mp3'));
+const tubeCompleteAudio = new Audio(encodeURI('MP3/Angel08-6(High-Short).mp3'));
+const CHEER_FILES = [
+  'MP3/Cheer-Yay02-mp3/Cheer-Yay02/Cheer-Yay02-1(High-Long-Solo).mp3',
+  'MP3/Cheer-Yay02-mp3/Cheer-Yay02/Cheer-Yay02-2(High-Short-Solo).mp3',
+  'MP3/Cheer-Yay02-mp3/Cheer-Yay02/Cheer-Yay02-3(Low-Long-Solo).mp3',
+  'MP3/Cheer-Yay02-mp3/Cheer-Yay02/Cheer-Yay02-4(Low-Short-Solo).mp3',
+  'MP3/Cheer-Yay02-mp3/Cheer-Yay02/Cheer-Yay02-5(High-Long-Applause).mp3',
+  'MP3/Cheer-Yay02-mp3/Cheer-Yay02/Cheer-Yay02-6(High-Short-Applause).mp3',
+  'MP3/Cheer-Yay02-mp3/Cheer-Yay02/Cheer-Yay02-7(Low-Long-Applause).mp3',
+  'MP3/Cheer-Yay02-mp3/Cheer-Yay02/Cheer-Yay02-8(Low-Short-Applause).mp3',
+];
 
 function playGrabSound(){
-  // "むちっ" - quick springy pop
-  playTone({startFreq:520, endFreq:220, duration:0.11, type:'triangle', peakGain:0.5, filterStart:1800, filterEnd:500});
+  try{ grabAudio.currentTime = 0; grabAudio.play().catch(()=>{}); }catch(e){}
 }
 
 function playDropSound(){
-  // "むにゅっ" - softer, slightly longer settle
-  playTone({startFreq:300, endFreq:130, duration:0.2, type:'sine', peakGain:0.4, filterStart:1200, filterEnd:300});
+  try{ putAudio.currentTime = 0; putAudio.play().catch(()=>{}); }catch(e){}
 }
 
 function playFanfare(){
-  const ctx = getAudioCtx();
-  if(!ctx) return;
-  const now = ctx.currentTime;
-  const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
-  notes.forEach((freq,i)=>{
-    playTone({startFreq:freq, endFreq:freq, duration:0.32, type:'triangle', peakGain:0.3, startTime:i*0.11});
-  });
-  const chordTime = notes.length*0.11;
-  [1046.50, 1318.51].forEach(freq=>{ // C6 + E6 shimmer
-    playTone({startFreq:freq, endFreq:freq, duration:0.6, type:'triangle', peakGain:0.25, startTime:chordTime});
-  });
+  const file = CHEER_FILES[Math.floor(Math.random()*CHEER_FILES.length)];
+  try{ new Audio(encodeURI(file)).play().catch(()=>{}); }catch(e){}
+}
+
+function playTubeCompleteSound(){
+  try{ tubeCompleteAudio.currentTime = 0; tubeCompleteAudio.play().catch(()=>{}); }catch(e){}
 }
 
 function doMove(from,to,record){
@@ -786,6 +969,10 @@ function doMove(from,to,record){
   if(record) history.push({from,to});
   moveCount++;
   playDropSound();
+  const tube = pegs[to];
+  if(tube.length === CAPACITY && tube.every(c => c === tube[0])){
+    playTubeCompleteSound();
+  }
 }
 
 function undo(){
@@ -901,9 +1088,42 @@ function performMove(from, to){
 function showWinOverlay(){
   document.getElementById('clearSub').textContent = `レベル ${level} をクリアしました（手数: ${moveCount}）`;
   spawnConfetti();
+  if(Math.random() < 0.35) spawnTanukiFountain();
   playFanfare();
   document.getElementById('overlay').classList.add('show');
 }
+
+// Random size for celebratory tanuki - anywhere from full size down to a
+// quarter of it, so a burst/fall doesn't look like identical stamped copies.
+function randomTanukiScale(){
+  return 0.25 + Math.random()*0.75;
+}
+
+// A burst of tanuki gushing up from the bottom-center, like a fountain.
+function spawnTanukiFountain(){
+  const overlay = document.getElementById('overlay');
+  overlay.querySelectorAll('.tanuki-fountain').forEach(c=>c.remove());
+  const count = 10 + Math.floor(Math.random()*5);
+  for(let i=0;i<count;i++){
+    const t = document.createElement('img');
+    t.className = 'tanuki-fountain';
+    t.src = TANUKI_DATA_URI;
+    const scale = randomTanukiScale();
+    t.style.width = (90*scale) + 'px';
+    t.style.height = (111*scale) + 'px';
+    const spread = (Math.random()-0.5) * 260;
+    const rot = (Math.random()-0.5) * 60;
+    t.style.setProperty('--fx', spread + 'px');
+    t.style.setProperty('--fx2', (spread*1.4) + 'px');
+    t.style.setProperty('--frot', rot + 'deg');
+    t.style.setProperty('--frot2', (rot*1.8) + 'deg');
+    t.style.animationDelay = (Math.random()*0.5) + 's';
+    t.style.animationDuration = (1.3 + Math.random()*0.6) + 's';
+    overlay.appendChild(t);
+  }
+}
+
+const TANUKI_MOTIONS = ['spin', 'side', 'bounce', 'grow'];
 
 function spawnConfetti(){
   const overlay = document.getElementById('overlay');
@@ -911,16 +1131,34 @@ function spawnConfetti(){
   for(let i=0;i<28;i++){
     const isTanuki = Math.random() < 0.12;
     const c = document.createElement(isTanuki ? 'img' : 'div');
-    c.className = 'confetti' + (isTanuki ? ' confetti-tanuki' : '');
     if(isTanuki){
+      const motion = TANUKI_MOTIONS[Math.floor(Math.random()*TANUKI_MOTIONS.length)];
+      c.className = `confetti confetti-tanuki motion-${motion}`;
       c.src = TANUKI_DATA_URI;
+      const scale = randomTanukiScale();
+      c.style.width = (170*scale) + 'px';
+      c.style.height = (210*scale) + 'px';
+      if(motion === 'grow'){
+        // stays centered on screen instead of falling from a random column
+        c.style.animationDuration = (1.9 + Math.random()*0.7) + 's';
+        c.style.animationDelay = (Math.random()*.4) + 's';
+      } else {
+        if(motion === 'side'){
+          const dir = Math.random() < 0.5 ? -1 : 1;
+          c.style.setProperty('--driftX', (dir*(80+Math.random()*140)) + 'px');
+        }
+        c.style.left = Math.random()*100 + '%';
+        c.style.animationDuration = (1.4 + Math.random()*1.4) + 's';
+        c.style.animationDelay = (Math.random()*.6) + 's';
+      }
     } else {
+      c.className = 'confetti';
       const col = PALETTE[Math.floor(Math.random()*PALETTE.length)];
       c.style.background = col.light;
+      c.style.left = Math.random()*100 + '%';
+      c.style.animationDuration = (1.4 + Math.random()*1.2) + 's';
+      c.style.animationDelay = (Math.random()*.6) + 's';
     }
-    c.style.left = Math.random()*100 + '%';
-    c.style.animationDuration = (1.4 + Math.random()*1.2) + 's';
-    c.style.animationDelay = (Math.random()*.6) + 's';
     overlay.appendChild(c);
   }
 }
