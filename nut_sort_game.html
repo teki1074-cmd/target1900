@@ -763,13 +763,17 @@ function isWinOn(state){
   return true;
 }
 
-// Verifies a randomly dealt board is actually solvable before showing it to
-// the player. Depth-first search with visited-state memoization, trying the
-// most promising move first (same "complete/extend a run" heuristic as a
-// human would use) so it typically solves in a handful of backtracks - but
-// unlike pure greedy, it can backtrack out of dead ends instead of just
-// giving up, which matters a lot once empty pegs are scarce.
-function isSolvable(startPegs, opts){
+// Checks whether a board can still reach a win. Depth-first search with
+// visited-state memoization, trying the most promising move first (same
+// "complete/extend a run" heuristic as a human would use) so it typically
+// solves in a handful of backtracks - but unlike pure greedy, it can
+// backtrack out of dead ends instead of just giving up, which matters a lot
+// once empty pegs are scarce.
+//
+// Returns {solvable, definitive}. `definitive` is true only when the search
+// fully exhausted every reachable state (a real proof), vs. just running out
+// of its node/time budget (inconclusive - treat as "don't know", not "no").
+function analyzeSolvability(startPegs, opts){
   const nodeBudget = opts.nodeBudget;
   const timeBudget = opts.timeBudget;
   const startTime = performance.now();
@@ -812,14 +816,14 @@ function isSolvable(startPegs, opts){
   // iterative DFS with an explicit stack (not recursion) so deep solutions
   // on large boards can't blow the JS call stack.
   const state = startPegs.map(p=>p.slice());
-  if(isWinOn(state)) return true;
+  if(isWinOn(state)) return {solvable:true, definitive:true};
   visited.add(stateKey(state));
   const stack = [{candidates: genCandidates(state), idx: 0, viaMove: null}];
 
   while(stack.length>0){
     nodes++;
-    if(nodes>nodeBudget) return false;
-    if((nodes & 255)===0 && performance.now()-startTime>timeBudget) return false;
+    if(nodes>nodeBudget) return {solvable:false, definitive:false};
+    if((nodes & 255)===0 && performance.now()-startTime>timeBudget) return {solvable:false, definitive:false};
 
     const top = stack[stack.length-1];
     if(top.idx >= top.candidates.length){
@@ -833,7 +837,7 @@ function isSolvable(startPegs, opts){
     const nut = state[c.from].pop();
     state[c.to].push(nut);
 
-    if(isWinOn(state)) return true;
+    if(isWinOn(state)) return {solvable:true, definitive:true};
 
     const key = stateKey(state);
     if(visited.has(key)){
@@ -844,7 +848,12 @@ function isSolvable(startPegs, opts){
     visited.add(key);
     stack.push({candidates: genCandidates(state), idx: 0, viaMove: c});
   }
-  return false;
+  // stack fully unwound: every reachable state was explored and none won
+  return {solvable:false, definitive:true};
+}
+
+function isSolvable(startPegs, opts){
+  return analyzeSolvability(startPegs, opts).solvable;
 }
 
 function shuffleArrayInPlace(arr){
@@ -904,18 +913,32 @@ function checkWin(){
   return isWinOn(pegs);
 }
 
-function hasAnyValidMove(){
+function countValidMoves(){
+  let count = 0;
   for(let f=0; f<pegs.length; f++){
     for(let t=0; t<pegs.length; t++){
-      if(isValidMove(f,t)) return true;
+      if(isValidMove(f,t)) count++;
     }
   }
-  return false;
+  return count;
 }
 
 let wasStuck = false;
 function checkDeadlock(){
-  const stuck = !checkWin() && !hasAnyValidMove();
+  if(checkWin()){ wasStuck = false; return; }
+
+  const validMoveCount = countValidMoves();
+  let stuck = validMoveCount === 0;
+  if(!stuck && validMoveCount <= 4){
+    // Very few options left is exactly the shape of a "sennichite" trap -
+    // e.g. the only legal moves just shuffle one ball back and forth between
+    // two pegs. hasAnyValidMove() alone can't tell that apart from genuine
+    // progress, so re-run the real solver from the CURRENT board; only trust
+    // a definitive (fully-exhausted) "no" here to avoid false alarms.
+    const result = analyzeSolvability(pegs, {nodeBudget:40000, timeBudget:200});
+    if(result.definitive && !result.solvable) stuck = true;
+  }
+
   if(stuck && !wasStuck){
     const flash = document.getElementById('deadlockFlash');
     flash.classList.remove('flash');
