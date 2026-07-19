@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ナットそろえパズル（4列固定）</title>
+<title>ボールそろえパズル</title>
 <style>
   :root{
     --bg-top:#0d0630;
@@ -94,16 +94,17 @@
     position:absolute;
     inset:0;
     display:grid;
-    grid-template-columns:repeat(4, 1fr); /* always exactly 4 pegs per row, no side margins */
+    grid-template-columns:repeat(auto-fit, 100px);
+    justify-content:center;
     align-content:center;
-    gap:4px 2px;
-    padding:10px 4px;
+    gap:4px 0;
+    padding:10px 0;
     overflow:visible;
     transform-origin:50% 50%;
     transition:transform .15s ease;
   }
   .peg{
-    width:100%;
+    width:100px;
     height:216px;
     position:relative;
     display:flex;
@@ -123,76 +124,50 @@
     60%{ transform:translateX(-4px); }
     80%{ transform:translateX(4px); }
   }
-  .peg .base{
+  .tube{
     position:absolute;
     bottom:6px;
-    width:60px; height:15px;
-    border-radius:50%;
-    background:radial-gradient(ellipse at 35% 30%, #fff8e8, #d8c9a3 55%, #8a7550 100%);
-    box-shadow:0 4px 6px rgba(0,0,0,.5), inset 0 2px 2px rgba(255,255,255,.5);
-  }
-  .peg .rod{
-    position:absolute;
-    bottom:13px;
-    width:15px;
-    border-radius:4px;
-    background:repeating-linear-gradient(180deg,#ffedb0 0 3px, #c9a24a 3px 6px);
-    box-shadow:inset -3px 0 4px rgba(0,0,0,.35), inset 2px 0 3px rgba(255,255,255,.45), 0 2px 8px rgba(0,0,0,.3);
-    transition:height .18s ease;
-  }
-  .peg .rod-cap{
-    position:absolute;
-    width:21px; height:11px;
-    border-radius:50%;
-    background:radial-gradient(ellipse at 35% 30%,#fff6dc,#d8b45c 60%,#9c7a2e);
-    box-shadow:0 2px 4px rgba(0,0,0,.4);
-    transition:bottom .18s ease;
-  }
-  .nut{
-    position:absolute;
-    width:84px;
-    height:47px;
-    clip-path:polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-    box-shadow:
-      inset 0 4px 6px rgba(255,255,255,.55),
-      inset 0 -6px 9px rgba(0,0,0,.4),
-      inset 7px 0 7px rgba(255,255,255,.12),
-      inset -7px 0 7px rgba(0,0,0,.2);
-    transition:bottom .18s ease, filter .15s ease, transform .12s ease;
-  }
-  .nut::before{
-    content:"";
-    position:absolute; inset:0;
-    background:linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0) 48%);
+    width:72px;
+    height:198px;
+    border-radius:12px 12px 32px 32px; /* flatter open mouth on top, rounded closed end on bottom - like a test tube */
+    border:3px solid rgba(255,255,255,.28);
+    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    box-shadow:inset 0 0 14px rgba(255,255,255,.06), 0 4px 10px rgba(0,0,0,.3);
+    transition:border-color .25s ease, box-shadow .25s ease;
     pointer-events:none;
   }
-  .nut::after{
-    content:"";
-    position:absolute;
-    top:50%; left:50%;
-    width:23px; height:23px;
-    margin:-11.5px 0 0 -11.5px;
-    border-radius:50%;
-    background:radial-gradient(circle at 35% 30%,#ffffff,#cfcfd6 55%, #8b8b93 100%);
-    box-shadow:inset 0 2px 3px rgba(0,0,0,.35), 0 1px 1px rgba(255,255,255,.4);
+  .tube.complete{
+    border-color:var(--tube-glow);
+    box-shadow:0 0 8px var(--tube-glow), 0 0 20px var(--tube-glow), inset 0 0 16px rgba(255,255,255,.18);
   }
-  .peg.selected .nut.top-nut{
-    transform:translateY(-14px) scale(1.05);
+  .ball{
+    position:absolute;
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    box-shadow:
+      inset -8px -10px 12px rgba(0,0,0,.35),
+      inset 5px 6px 8px rgba(255,255,255,.45),
+      0 3px 6px rgba(0,0,0,.35);
+    transition:bottom .18s ease, filter .15s ease, transform .12s ease;
+  }
+  .peg.selected .ball.top-ball{
+    transform:translateY(-16px) scale(1.08);
     filter:brightness(1.15) drop-shadow(0 0 10px rgba(255,255,255,.75));
   }
-  .nut.ghost{
+  .ball.ghost{
     z-index:999;
     pointer-events:none;
     margin:0;
     filter:drop-shadow(0 10px 16px rgba(0,0,0,.5)) brightness(1.06);
   }
-  @keyframes nutFly{
+  @keyframes ballFly{
     0%{ transform:translate(0,0) scale(1.04); }
     45%{ transform:translate(calc(var(--dx) * .5), calc(var(--dy) * .5 - 30px)) scale(1.12); }
     100%{ transform:translate(var(--dx), var(--dy)) scale(1); }
   }
-  .nut.flying{
-    animation:nutFly .34s cubic-bezier(.32,.9,.35,1.15) forwards;
+  .ball.flying{
+    animation:ballFly .34s cubic-bezier(.32,.9,.35,1.15) forwards;
     filter:drop-shadow(0 10px 16px rgba(0,0,0,.45));
   }
   .bottombar{
@@ -250,6 +225,13 @@
   @keyframes confettiFall{
     0%{ transform:translateY(0) rotate(0deg); opacity:1; }
     100%{ transform:translateY(110vh) rotate(540deg); opacity:.3; }
+  }
+  .confetti-tanuki{
+    width:170px;
+    height:210px;
+    border-radius:16px;
+    background:transparent;
+    filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));
   }
   .card{
     background:linear-gradient(160deg,#2a1a5e,#150a38);
@@ -345,7 +327,7 @@
   <div class="topbar">
     <button class="icon-btn" id="resetBtn2" title="やり直す">↺</button>
     <div class="title-wrap">
-      <div class="title" id="levelTitle">🔩 レベル 1</div>
+      <div class="title" id="levelTitle">🎱 レベル 1</div>
       <div class="badges" id="levelBadges"></div>
     </div>
     <button class="icon-btn" id="diffBtn" title="難易度を選ぶ">🎚️</button>
@@ -371,12 +353,12 @@
 
 <div id="startOverlay" class="modal-overlay show">
   <div class="card start-card">
-    <div class="game-icon">🔩</div>
-    <h2>ナットそろえパズル</h2>
+    <div class="game-icon">🎱</div>
+    <h2>ボールそろえパズル</h2>
     <p>難易度を選んでください</p>
     <button class="diff-btn normal" data-diff="normal">ノーマル<span class="diff-desc">はじめての方向け</span></button>
-    <button class="diff-btn hard" data-diff="hard">ハード<span class="diff-desc">色数が多く、空きペグ少なめ</span></button>
-    <button class="diff-btn extreme" data-diff="extreme">エクストリーム<span class="diff-desc">空きペグ最小、上級者向け</span></button>
+    <button class="diff-btn hard" data-diff="hard">ハード<span class="diff-desc">色数が多く、空き筒少なめ</span></button>
+    <button class="diff-btn extreme" data-diff="extreme">エクストリーム<span class="diff-desc">空き筒最小、上級者向け</span></button>
     <div class="level-picker">
       <label for="startLevelInput">開始レベル</label>
       <input type="number" id="startLevelInput" min="1" max="999" value="1" inputmode="numeric">
@@ -386,23 +368,112 @@
 </div>
 
 <script>
-const CAPACITY = 4; // 1本のネジに4個のナット
-const GRID_COLUMNS = 4; // 1行に並べるボルトの本数を固定
+const CAPACITY = 4; // 1本の筒に4個のボール
 
+// Hues are spread out (roughly every 25-40 degrees around the wheel) so no
+// two colors sit close enough to be confused - the previous palette bunched
+// yellow/lime/green/teal together in one narrow band, which was the problem.
 const PALETTE = [
-  {light:'#ffe066', dark:'#e0a800'}, // yellow
-  {light:'#f48fb1', dark:'#c2185b'}, // pink
-  {light:'#ffb74d', dark:'#e65100'}, // orange
-  {light:'#81c784', dark:'#2e7d32'}, // green
-  {light:'#757575', dark:'#212121'}, // black/gray
-  {light:'#64b5f6', dark:'#0d47a1'}, // blue
-  {light:'#ba68c8', dark:'#6a1b9a'}, // purple
-  {light:'#cfd8dc', dark:'#78909c'}, // silver
-  {light:'#4dd0c8', dark:'#00695c'}, // teal
-  {light:'#ef5350', dark:'#b71c1c'}, // red
-  {light:'#c6e05c', dark:'#7c9c1f'}, // lime
-  {light:'#7986cb', dark:'#303f9c'}, // indigo
+  {light:'#ffe066', dark:'#e0a800'}, // yellow      hue ~48
+  {light:'#f48fb1', dark:'#c2185b'}, // pink         hue ~340
+  {light:'#ffa726', dark:'#e65100'}, // orange       hue ~33
+  {light:'#ec407a', dark:'#ad1457', pattern:{base:'#ffffff', dot:'#ec407a'}}, // white/pink polka dot - hue alone can't separate green from its neighbors for colorblind players
+  {light:'#8a8f98', dark:'#2b2e33'}, // gray (dark, neutral)
+  {light:'#5c6bc0', dark:'#1a237e'}, // blue         hue ~231
+  {light:'#ba68c8', dark:'#6a1b9a'}, // purple       hue ~291
+  {light:'#e8edf0', dark:'#9aa5ad'}, // silver (light, neutral)
+  {light:'#26bfa8', dark:'#00695c'}, // teal         hue ~165
+  {light:'#ff5252', dark:'#b71c1c'}, // red          hue ~0
+  {light:'#b17d52', dark:'#6b4423'}, // brown        hue ~25, muted
+  {light:'#4fc3f7', dark:'#0277bd'}, // sky blue     hue ~199
 ];
+
+// A little tanuki that occasionally falls with the win-screen confetti.
+const TANUKI_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <filter id="fur" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="3" dy="5" stdDeviation="6" flood-color="#5a3a1a" flood-opacity="0.3"/>
+    </filter>
+    <radialGradient id="bodyGrad" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#c4935a"/>
+      <stop offset="60%" stop-color="#8b5e2a"/>
+      <stop offset="100%" stop-color="#5c3810"/>
+    </radialGradient>
+    <radialGradient id="bellyGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f5e0c0"/>
+      <stop offset="100%" stop-color="#d4b48a"/>
+    </radialGradient>
+    <radialGradient id="faceGrad" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#d4a870"/>
+      <stop offset="100%" stop-color="#8b5e2a"/>
+    </radialGradient>
+    <radialGradient id="earGrad" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#c4935a"/>
+      <stop offset="100%" stop-color="#5c3810"/>
+    </radialGradient>
+    <radialGradient id="noseGrad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#5a3030"/>
+      <stop offset="100%" stop-color="#1a0505"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="#f7f0e6" rx="20"/>
+  <circle cx="340" cy="70" r="40" fill="#fff8e0" opacity="0.7"/>
+  <circle cx="355" cy="60" r="32" fill="#f7f0e6" opacity="0.7"/>
+  <circle cx="60" cy="50" r="2" fill="#d4b060" opacity="0.6"/>
+  <circle cx="120" cy="30" r="1.5" fill="#d4b060" opacity="0.5"/>
+  <circle cx="280" cy="90" r="1.5" fill="#d4b060" opacity="0.4"/>
+  <circle cx="50" cy="120" r="1" fill="#d4b060" opacity="0.4"/>
+  <ellipse cx="200" cy="470" rx="110" ry="18" fill="#8b5e2a" opacity="0.18"/>
+  <ellipse cx="270" cy="400" rx="55" ry="40" fill="#8b5e2a" filter="url(#fur)"/>
+  <ellipse cx="270" cy="400" rx="38" ry="27" fill="#c4935a" filter="url(#fur)"/>
+  <ellipse cx="295" cy="418" rx="22" ry="16" fill="#f5e0c0" filter="url(#fur)" opacity="0.9"/>
+  <ellipse cx="200" cy="360" rx="105" ry="120" fill="url(#bodyGrad)" filter="url(#fur)" style="filter: url(#shadow) url(#fur)"/>
+  <ellipse cx="200" cy="370" rx="58" ry="75" fill="url(#bellyGrad)" filter="url(#fur)" opacity="0.9"/>
+  <ellipse cx="150" cy="455" rx="28" ry="22" fill="#7a5225" filter="url(#fur)"/>
+  <ellipse cx="250" cy="455" rx="28" ry="22" fill="#7a5225" filter="url(#fur)"/>
+  <ellipse cx="145" cy="468" rx="22" ry="12" fill="#5c3810" filter="url(#fur)"/>
+  <ellipse cx="255" cy="468" rx="22" ry="12" fill="#5c3810" filter="url(#fur)"/>
+  <ellipse cx="118" cy="360" rx="28" ry="18" fill="#7a5225" transform="rotate(-30 118 360)" filter="url(#fur)"/>
+  <ellipse cx="282" cy="360" rx="28" ry="18" fill="#7a5225" transform="rotate(30 282 360)" filter="url(#fur)"/>
+  <ellipse cx="200" cy="258" rx="52" ry="30" fill="#8b5e2a" filter="url(#fur)"/>
+  <ellipse cx="200" cy="210" rx="95" ry="85" fill="url(#faceGrad)" filter="url(#fur)" style="filter: url(#shadow) url(#fur)"/>
+  <ellipse cx="130" cy="148" rx="38" ry="48" fill="url(#earGrad)" filter="url(#fur)" transform="rotate(-12 130 148)"/>
+  <ellipse cx="132" cy="150" rx="22" ry="30" fill="#e8a080" filter="url(#fur)" transform="rotate(-12 132 150)" opacity="0.8"/>
+  <ellipse cx="270" cy="148" rx="38" ry="48" fill="url(#earGrad)" filter="url(#fur)" transform="rotate(12 270 148)"/>
+  <ellipse cx="268" cy="150" rx="22" ry="30" fill="#e8a080" filter="url(#fur)" transform="rotate(12 268 150)" opacity="0.8"/>
+  <ellipse cx="162" cy="210" rx="32" ry="24" fill="#3d2010" opacity="0.65" filter="url(#fur)"/>
+  <ellipse cx="238" cy="210" rx="32" ry="24" fill="#3d2010" opacity="0.65" filter="url(#fur)"/>
+  <ellipse cx="162" cy="210" rx="20" ry="18" fill="white"/>
+  <ellipse cx="238" cy="210" rx="20" ry="18" fill="white"/>
+  <ellipse cx="163" cy="212" rx="13" ry="14" fill="#3a2000"/>
+  <ellipse cx="239" cy="212" rx="13" ry="14" fill="#3a2000"/>
+  <ellipse cx="164" cy="213" rx="8" ry="9" fill="#0a0500"/>
+  <ellipse cx="240" cy="213" rx="8" ry="9" fill="#0a0500"/>
+  <ellipse cx="158" cy="207" rx="4" ry="5" fill="white" opacity="0.85"/>
+  <ellipse cx="167" cy="218" rx="2" ry="2" fill="white" opacity="0.5"/>
+  <ellipse cx="234" cy="207" rx="4" ry="5" fill="white" opacity="0.85"/>
+  <ellipse cx="243" cy="218" rx="2" ry="2" fill="white" opacity="0.5"/>
+  <ellipse cx="200" cy="238" rx="38" ry="28" fill="#f0d8b0" filter="url(#fur)"/>
+  <ellipse cx="200" cy="228" rx="14" ry="10" fill="url(#noseGrad)"/>
+  <ellipse cx="196" cy="225" rx="4" ry="3" fill="white" opacity="0.4"/>
+  <path d="M 188 240 Q 200 252 212 240" stroke="#7a4020" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <line x1="155" y1="237" x2="188" y2="242" stroke="#d4b48a" stroke-width="1.5" opacity="0.8"/>
+  <line x1="150" y1="243" x2="188" y2="245" stroke="#d4b48a" stroke-width="1.5" opacity="0.7"/>
+  <line x1="152" y1="250" x2="188" y2="248" stroke="#d4b48a" stroke-width="1.5" opacity="0.6"/>
+  <line x1="245" y1="237" x2="212" y2="242" stroke="#d4b48a" stroke-width="1.5" opacity="0.8"/>
+  <line x1="250" y1="243" x2="212" y2="245" stroke="#d4b48a" stroke-width="1.5" opacity="0.7"/>
+  <line x1="248" y1="250" x2="212" y2="248" stroke="#d4b48a" stroke-width="1.5" opacity="0.6"/>
+  <ellipse cx="145" cy="230" rx="28" ry="20" fill="#c4935a" opacity="0.5" filter="url(#fur)"/>
+  <ellipse cx="255" cy="230" rx="28" ry="20" fill="#c4935a" opacity="0.5" filter="url(#fur)"/>
+  <ellipse cx="200" cy="145" rx="30" ry="20" fill="#c4935a" filter="url(#fur)" opacity="0.9"/>
+  <ellipse cx="200" cy="140" rx="18" ry="14" fill="#d4a870" filter="url(#fur)" opacity="0.8"/>
+  <text x="200" y="495" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#5c3810" opacity="0.7">🍃 フサフサのタヌキ 🍃</text>
+</svg>`;
+const TANUKI_DATA_URI = `data:image/svg+xml,${encodeURIComponent(TANUKI_SVG)}`;
 
 // Empty pegs are the only "workspace" the player has to temporarily park a
 // nut, and empirically this puzzle needs at least 2 to stay reliably
@@ -638,9 +709,9 @@ function nextLevel(){
   render();
 }
 
-function topNutEl(idx){
+function topBallEl(idx){
   const pegEl = boardEl.children[idx];
-  return pegEl ? pegEl.querySelector('.top-nut') : null;
+  return pegEl ? pegEl.querySelector('.top-ball') : null;
 }
 
 function pegElAt(idx){
@@ -656,11 +727,27 @@ function findPegAt(x, y){
   return Number.isNaN(idx) ? null : idx;
 }
 
-function makeGhostNut(colorIdx, rect){
-  const g = document.createElement('div');
-  g.className = 'nut top-nut ghost';
+// Some colors (currently the green replacement) are distinguished by a
+// pattern instead of hue, since hue alone isn't enough for colorblind
+// players. Shared by both the static render and the drag/fly ghost so they
+// always look the same.
+function applyBallLook(el, colorIdx){
   const col = PALETTE[colorIdx];
-  g.style.background = `linear-gradient(135deg, ${col.light}, ${col.dark})`;
+  if(col.pattern){
+    el.style.backgroundColor = col.pattern.base;
+    el.style.backgroundImage =
+      `radial-gradient(circle 4px at 25% 25%, ${col.pattern.dot} 100%, transparent 100%),` +
+      `radial-gradient(circle 4px at 75% 75%, ${col.pattern.dot} 100%, transparent 100%)`;
+    el.style.backgroundSize = '16px 16px';
+  } else {
+    el.style.background = `radial-gradient(circle at 32% 28%, #ffffff 0%, ${col.light} 32%, ${col.dark} 100%)`;
+  }
+}
+
+function makeGhostBall(colorIdx, rect){
+  const g = document.createElement('div');
+  g.className = 'ball top-ball ghost';
+  applyBallLook(g, colorIdx);
   g.style.left = rect.left + 'px';
   g.style.top = rect.top + 'px';
   g.style.width = rect.width + 'px';
@@ -678,8 +765,8 @@ function clearDropHighlights(){
 
 // ---- tap-to-move flight animation ----
 function performMove(from, to){
-  const nutEl = topNutEl(from);
-  const startRect = nutEl ? nutEl.getBoundingClientRect() : null;
+  const ballEl = topBallEl(from);
+  const startRect = ballEl ? ballEl.getBoundingClientRect() : null;
   const colorIdx = pegs[from][pegs[from].length-1];
 
   doMove(from, to, true);
@@ -687,11 +774,11 @@ function performMove(from, to){
   render();
 
   if(startRect){
-    const destEl = topNutEl(to);
+    const destEl = topBallEl(to);
     if(destEl){
       const endRect = destEl.getBoundingClientRect();
       destEl.style.visibility = 'hidden';
-      const ghost = makeGhostNut(colorIdx, startRect);
+      const ghost = makeGhostBall(colorIdx, startRect);
       ghost.style.setProperty('--dx', (endRect.left - startRect.left) + 'px');
       ghost.style.setProperty('--dy', (endRect.top - startRect.top) + 'px');
       requestAnimationFrame(()=> ghost.classList.add('flying'));
@@ -717,10 +804,15 @@ function spawnConfetti(){
   const overlay = document.getElementById('overlay');
   overlay.querySelectorAll('.confetti').forEach(c=>c.remove());
   for(let i=0;i<28;i++){
-    const c = document.createElement('div');
-    c.className = 'confetti';
-    const col = PALETTE[Math.floor(Math.random()*PALETTE.length)];
-    c.style.background = col.light;
+    const isTanuki = Math.random() < 0.12;
+    const c = document.createElement(isTanuki ? 'img' : 'div');
+    c.className = 'confetti' + (isTanuki ? ' confetti-tanuki' : '');
+    if(isTanuki){
+      c.src = TANUKI_DATA_URI;
+    } else {
+      const col = PALETTE[Math.floor(Math.random()*PALETTE.length)];
+      c.style.background = col.light;
+    }
     c.style.left = Math.random()*100 + '%';
     c.style.animationDuration = (1.4 + Math.random()*1.2) + 's';
     c.style.animationDelay = (Math.random()*.6) + 's';
@@ -748,7 +840,7 @@ function onPegPointerDown(e, idx){
     startY: e.clientY,
     moved:false,
     pegEl,
-    nutEl:null,
+    ballEl:null,
     ghost:null,
     startRect:null
   };
@@ -763,14 +855,14 @@ function onPegPointerMove(e, idx){
   if(!interaction.moved && Math.hypot(dx,dy) > DRAG_THRESHOLD){
     interaction.moved = true;
     selected = null;
-    const nutEl = topNutEl(interaction.fromIdx);
-    if(!nutEl){ interaction.moved = false; return; }
-    interaction.nutEl = nutEl;
-    interaction.startRect = nutEl.getBoundingClientRect();
-    nutEl.style.visibility = 'hidden';
+    const ballEl = topBallEl(interaction.fromIdx);
+    if(!ballEl){ interaction.moved = false; return; }
+    interaction.ballEl = ballEl;
+    interaction.startRect = ballEl.getBoundingClientRect();
+    ballEl.style.visibility = 'hidden';
     interaction.pegEl.classList.add('dragging-source');
     const colorIdx = pegs[interaction.fromIdx][pegs[interaction.fromIdx].length-1];
-    interaction.ghost = makeGhostNut(colorIdx, interaction.startRect);
+    interaction.ghost = makeGhostBall(colorIdx, interaction.startRect);
     interaction.ghost.style.transition = 'transform 60ms linear';
   }
 
@@ -816,7 +908,7 @@ function finishPickup(e){
   if(valid){
     doMove(it.fromIdx, dropIdx, true);
     render();
-    const destEl = topNutEl(dropIdx);
+    const destEl = topBallEl(dropIdx);
     if(destEl){
       const endRect = destEl.getBoundingClientRect();
       destEl.style.visibility = 'hidden';
@@ -840,7 +932,7 @@ function finishPickup(e){
     }
     settleGhost(it.ghost, 'translate(0,0) scale(1)', 220, ()=>{
       it.ghost.remove();
-      it.nutEl.style.visibility = '';
+      it.ballEl.style.visibility = '';
     });
   }
 
@@ -874,7 +966,7 @@ function onPegPointerCancel(e, idx){
     clearDropHighlights();
     interaction.pegEl.classList.remove('dragging-source');
     if(interaction.ghost) interaction.ghost.remove();
-    if(interaction.nutEl) interaction.nutEl.style.visibility = '';
+    if(interaction.ballEl) interaction.ballEl.style.visibility = '';
   }
   interaction = null;
 }
@@ -888,7 +980,7 @@ function attachPegHandlers(pegEl, idx){
 
 function render(){
   const {colorsCount, emptyPegs} = levelConfig(level);
-  document.getElementById('levelTitle').textContent = `🔩 レベル ${level}`;
+  document.getElementById('levelTitle').textContent = `🎱 レベル ${level}`;
   const badges = document.getElementById('levelBadges');
   badges.innerHTML = `<span class="badge diff-${difficulty}">${DIFFICULTIES[difficulty].label}</span><span class="badge">色: ${colorsCount}</span><span class="badge">空き: ${emptyPegs}</span>`;
   document.getElementById('movesLabel').textContent = `手数: ${moveCount}`;
@@ -901,30 +993,21 @@ function render(){
     pegEl.dataset.idx = idx;
     attachPegHandlers(pegEl, idx);
 
-    const base = document.createElement('div');
-    base.className = 'base';
-    pegEl.appendChild(base);
-
-    const filled = peg.length;
-    const rodHeight = 16 + (CAPACITY - filled) * 30;
-    const rod = document.createElement('div');
-    rod.className = 'rod';
-    rod.style.height = rodHeight + 'px';
-    pegEl.appendChild(rod);
-
-    const cap = document.createElement('div');
-    cap.className = 'rod-cap';
-    cap.style.bottom = (20 + rodHeight - 6) + 'px';
-    pegEl.appendChild(cap);
+    const isComplete = peg.length===CAPACITY && peg.every(c=>c===peg[0]);
+    const tube = document.createElement('div');
+    tube.className = 'tube' + (isComplete ? ' complete' : '');
+    if(isComplete){
+      tube.style.setProperty('--tube-glow', PALETTE[peg[0]].light);
+    }
+    pegEl.appendChild(tube);
 
     peg.forEach((colorIdx, j)=>{
-      const nut = document.createElement('div');
+      const ball = document.createElement('div');
       const isTop = (j === peg.length-1);
-      nut.className = 'nut' + (isTop ? ' top-nut' : '');
-      const col = PALETTE[colorIdx];
-      nut.style.background = `linear-gradient(135deg, ${col.light}, ${col.dark})`;
-      nut.style.bottom = (20 + j*26) + 'px';
-      pegEl.appendChild(nut);
+      ball.className = 'ball' + (isTop ? ' top-ball' : '');
+      applyBallLook(ball, colorIdx);
+      ball.style.bottom = (16 + j*42) + 'px';
+      pegEl.appendChild(ball);
     });
 
     boardEl.appendChild(pegEl);
@@ -961,17 +1044,20 @@ function loadState(){
   }
 }
 
-// The grid is always exactly GRID_COLUMNS wide, so with more pegs than fit
-// in one screen's worth of rows (up to 12 colors + 2 empty = 14 pegs), the
-// grid grows downward. Shrink the whole thing uniformly so every row stays
-// on screen without needing to scroll to reach the bottom pegs.
+// Peg count varies a lot with difficulty (up to 12 colors + 2 empty = 14
+// pegs), and on tall/narrow phones that can need more vertical space than
+// the screen has. Rather than letting the board scroll internally (which is
+// what caused nuts near the bottom to be unreachable without scrolling on
+// an iPhone), shrink the whole grid down uniformly so every peg is always
+// visible and reachable in one screen.
 const boardPanelEl = document.querySelector('.board-panel');
 function fitBoard(){
   const availW = boardPanelEl.clientWidth;
   const availH = boardPanelEl.clientHeight;
   if(availW===0 || availH===0) return;
-  const pegH = 216, rowGap = 4, vPad = 20;
-  const rows = Math.max(1, Math.ceil(pegs.length / GRID_COLUMNS));
+  const pegW = 100, pegH = 216, rowGap = 4, vPad = 20;
+  const columns = Math.max(1, Math.floor(availW / pegW));
+  const rows = Math.max(1, Math.ceil(pegs.length / columns));
   const neededH = rows*pegH + (rows-1)*rowGap + vPad;
   const scale = Math.min(1, availH / neededH) * 0.98;
   boardEl.style.transform = `scale(${scale})`;
