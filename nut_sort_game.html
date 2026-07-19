@@ -1294,7 +1294,7 @@ function showWinOverlay(){
   const winCard = document.getElementById('winCard');
   winCard.classList.remove('reveal');
   const bgImg = document.getElementById('winBgImage');
-  if(Math.random() < 1.00){
+  if(Math.random() < 0.10){
     bgImg.style.backgroundImage = "url('" + FRANCE_BG_DATA_URI + "')";
     bgImg.classList.add('show');
   } else {
