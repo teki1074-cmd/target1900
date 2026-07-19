@@ -348,6 +348,9 @@
     top:auto;
     right:-10px;
     bottom:-25px;
+    /* only the top (face/head) portion of the artwork should show - the
+       body lives in the bottom half, so crop it off regardless of size */
+    clip-path: inset(0 0 45% 0);
     animation:tanukiPeek 3.5s ease-in-out forwards;
   }
   #deadlockFlash{
@@ -1295,7 +1298,8 @@ function showWinOverlay(){
 // Random size for celebratory tanuki - anywhere from full size down to a
 // quarter of it, so a burst/fall doesn't look like identical stamped copies.
 function randomTanukiScale(){
-  return 0.25 + Math.random()*0.75;
+  // min stays the same (25% of base); max is now 2x the base size (was 1x)
+  return 0.25 + Math.random()*1.75;
 }
 
 // A burst of tanuki gushing up from the bottom-center, like a fountain.
@@ -1369,7 +1373,8 @@ function spawnConfetti(){
         c.style.animationDelay = (Math.random()*.5) + 's';
       } else if(motion === 'peek'){
         // does nothing for 2s, then a bigger tanuki peeks in from the corner
-        const peekScale = 0.95 + Math.random()*0.3;
+        // min stays the same; max is now 2x the old max (was 1.25x base, now 2.5x)
+        const peekScale = 0.95 + Math.random()*1.55;
         c.style.width = (220*peekScale) + 'px';
         c.style.height = (272*peekScale) + 'px';
         c.style.animationDuration = '3.5s';
