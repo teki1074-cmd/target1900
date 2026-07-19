@@ -264,6 +264,92 @@
     top:50%; left:50%;
     animation:tanukiCenterGrow ease-out forwards;
   }
+  @keyframes tanukiFastSpin{
+    0%{   transform:rotate(0deg) scale(.8);    opacity:0; }
+    15%{  transform:rotate(180deg) scale(1);   opacity:1; }
+    85%{  opacity:1; }
+    100%{ transform:rotate(1080deg) scale(1);  opacity:0; }
+  }
+  .confetti-tanuki.motion-fastspin{
+    animation:tanukiFastSpin ease-out forwards;
+  }
+  @keyframes tanukiDiagonal{
+    0%{   transform:translate(0,0) rotate(0deg); opacity:1; }
+    100%{ transform:translate(var(--dfx,150px), 108vh) rotate(var(--drot,150deg)); opacity:.3; }
+  }
+  .confetti-tanuki.motion-diagonal{
+    animation:tanukiDiagonal linear forwards;
+  }
+  @keyframes tanukiTremble{
+    0%{   transform:translate(0,0);        opacity:1; }
+    5%{   transform:translate(-9px, 5vh); }
+    10%{  transform:translate(9px, 11vh); }
+    15%{  transform:translate(-9px, 16vh); }
+    20%{  transform:translate(9px, 22vh); }
+    25%{  transform:translate(-9px, 27vh); }
+    30%{  transform:translate(9px, 33vh); }
+    35%{  transform:translate(-9px, 38vh); }
+    40%{  transform:translate(9px, 44vh); }
+    45%{  transform:translate(-9px, 49vh); }
+    50%{  transform:translate(9px, 55vh); }
+    55%{  transform:translate(-9px, 60vh); }
+    60%{  transform:translate(9px, 66vh); }
+    65%{  transform:translate(-9px, 71vh); }
+    70%{  transform:translate(9px, 77vh); }
+    75%{  transform:translate(-9px, 82vh); }
+    80%{  transform:translate(9px, 88vh); }
+    85%{  transform:translate(-9px, 93vh); }
+    90%{  transform:translate(9px, 99vh); }
+    95%{  transform:translate(-9px, 104vh); }
+    100%{ transform:translate(0, 109vh);      opacity:.3; }
+  }
+  .confetti-tanuki.motion-shake{
+    animation:tanukiTremble linear forwards;
+  }
+  @keyframes tanukiVortex{
+    0%{     transform:translate(15px, calc(0vh + 0px)) rotate(0deg);          opacity:0; }
+    8%{     opacity:1; }
+    12.5%{  transform:translate(-17px, calc(13.5vh + 8px)) rotate(120deg); }
+    25%{    transform:translate(0px, calc(27vh - 16px)) rotate(240deg); }
+    37.5%{  transform:translate(29px, calc(40.5vh + 15px)) rotate(360deg); }
+    50%{    transform:translate(-50px, calc(54vh + 0px)) rotate(480deg); }
+    62.5%{  transform:translate(42px, calc(67.5vh - 21px)) rotate(600deg); }
+    75%{    transform:translate(0px, calc(81vh + 34px)) rotate(720deg); }
+    87.5%{  transform:translate(-54px, calc(94.5vh - 27px)) rotate(840deg); }
+    100%{   transform:translate(85px, calc(108vh + 0px)) rotate(960deg);      opacity:.3; }
+  }
+  .confetti-tanuki.motion-vortex{
+    animation:tanukiVortex linear forwards;
+  }
+  @keyframes tanukiBlink{
+    0%{   transform:translateY(0);      opacity:1; }
+    10%{  opacity:.15; }
+    20%{  opacity:1; }
+    30%{  opacity:.15; }
+    40%{  opacity:1; }
+    50%{  opacity:.15; }
+    60%{  opacity:1; }
+    70%{  opacity:.15; }
+    80%{  opacity:1; }
+    90%{  opacity:.15; }
+    100%{ transform:translateY(108vh); opacity:.3; }
+  }
+  .confetti-tanuki.motion-blink{
+    animation:tanukiBlink linear forwards;
+  }
+  @keyframes tanukiPeek{
+    0%{   transform:translate(50px, 50px); opacity:0; }
+    57%{  transform:translate(50px, 50px); opacity:0; }
+    70%{  transform:translate(0,0);        opacity:1; }
+    88%{  transform:translate(0,0);        opacity:1; }
+    100%{ transform:translate(35px, 35px); opacity:0; }
+  }
+  .confetti-tanuki.motion-peek{
+    top:auto;
+    right:-10px;
+    bottom:-25px;
+    animation:tanukiPeek 3.5s ease-in-out forwards;
+  }
   #deadlockFlash{
     position:fixed; inset:0;
     background:rgba(255,20,20,.4);
@@ -1147,6 +1233,16 @@ function spawnTanukiFountain(){
 }
 
 const TANUKI_MOTIONS = ['spin', 'side', 'bounce', 'grow'];
+const TANUKI_MOTIONS_RARE = ['fastspin', 'diagonal', 'shake', 'vortex', 'blink'];
+// Each of the 5 "rare" motions shows up half as often as each of the
+// original 4, and 'peek' shows up half as often again as the rare ones -
+// i.e. a quarter the rate of an original. Weighting the pool 4x/2x/1x under
+// uniform random pick gives exactly that ratio.
+const TANUKI_MOTION_POOL = [
+  ...TANUKI_MOTIONS, ...TANUKI_MOTIONS, ...TANUKI_MOTIONS, ...TANUKI_MOTIONS,
+  ...TANUKI_MOTIONS_RARE, ...TANUKI_MOTIONS_RARE,
+  'peek'
+];
 
 function spawnConfetti(){
   const overlay = document.getElementById('overlay');
@@ -1155,7 +1251,7 @@ function spawnConfetti(){
     const isTanuki = Math.random() < 0.12;
     const c = document.createElement(isTanuki ? 'img' : 'div');
     if(isTanuki){
-      const motion = TANUKI_MOTIONS[Math.floor(Math.random()*TANUKI_MOTIONS.length)];
+      const motion = TANUKI_MOTION_POOL[Math.floor(Math.random()*TANUKI_MOTION_POOL.length)];
       c.className = `confetti confetti-tanuki motion-${motion}`;
       c.src = TANUKI_DATA_URI;
       const scale = randomTanukiScale();
@@ -1165,10 +1261,26 @@ function spawnConfetti(){
         // stays centered on screen instead of falling from a random column
         c.style.animationDuration = (1.9 + Math.random()*0.7) + 's';
         c.style.animationDelay = (Math.random()*.4) + 's';
+      } else if(motion === 'fastspin'){
+        // spins in place rather than falling down the screen
+        c.style.top = (15 + Math.random()*55) + '%';
+        c.style.left = Math.random()*85 + '%';
+        c.style.animationDuration = (1.1 + Math.random()*0.6) + 's';
+        c.style.animationDelay = (Math.random()*.5) + 's';
+      } else if(motion === 'peek'){
+        // does nothing for 2s, then a bigger tanuki peeks in from the corner
+        const peekScale = 0.95 + Math.random()*0.3;
+        c.style.width = (220*peekScale) + 'px';
+        c.style.height = (272*peekScale) + 'px';
+        c.style.animationDuration = '3.5s';
+        c.style.animationDelay = '0s';
       } else {
-        if(motion === 'side'){
+        if(motion === 'side' || motion === 'diagonal'){
           const dir = Math.random() < 0.5 ? -1 : 1;
-          c.style.setProperty('--driftX', (dir*(80+Math.random()*140)) + 'px');
+          const dist = 80 + Math.random()*140;
+          c.style.setProperty('--driftX', (dir*dist) + 'px');
+          c.style.setProperty('--dfx', (dir*dist) + 'px');
+          c.style.setProperty('--drot', (dir*(90+Math.random()*120)) + 'deg');
         }
         c.style.left = Math.random()*100 + '%';
         c.style.animationDuration = (1.4 + Math.random()*1.4) + 's';
