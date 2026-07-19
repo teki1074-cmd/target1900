@@ -233,6 +233,21 @@
     background:transparent;
     filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));
   }
+  #deadlockFlash{
+    position:fixed; inset:0;
+    background:rgba(255,20,20,.4);
+    pointer-events:none;
+    opacity:0;
+    z-index:60;
+  }
+  #deadlockFlash.flash{
+    animation:deadlockPulse .7s ease;
+  }
+  @keyframes deadlockPulse{
+    0%{ opacity:0; }
+    18%{ opacity:1; }
+    100%{ opacity:0; }
+  }
   .card{
     background:linear-gradient(160deg,#2a1a5e,#150a38);
     border:2px solid #6a3fd1;
@@ -323,6 +338,7 @@
 </style>
 </head>
 <body>
+<div id="deadlockFlash"></div>
 <div id="app">
   <div class="topbar">
     <button class="icon-btn" id="resetBtn2" title="やり直す">↺</button>
@@ -677,11 +693,99 @@ function checkWin(){
   return isWinOn(pegs);
 }
 
+function hasAnyValidMove(){
+  for(let f=0; f<pegs.length; f++){
+    for(let t=0; t<pegs.length; t++){
+      if(isValidMove(f,t)) return true;
+    }
+  }
+  return false;
+}
+
+let wasStuck = false;
+function checkDeadlock(){
+  const stuck = !checkWin() && !hasAnyValidMove();
+  if(stuck && !wasStuck){
+    const flash = document.getElementById('deadlockFlash');
+    flash.classList.remove('flash');
+    void flash.offsetWidth; // restart the animation even if it's already mid-flash
+    flash.classList.add('flash');
+  }
+  wasStuck = stuck;
+}
+
+// -- synthesized sound effects (Web Audio API, no audio files needed) --
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx){
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return null;
+    audioCtx = new Ctx();
+  }
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(opts){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  const {startFreq, endFreq, duration, type='sine', peakGain=0.4, filterStart, filterEnd, startTime=0}
+    = opts;
+  const t0 = ctx.currentTime + startTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(startFreq, t0);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(endFreq,1), t0+duration);
+
+  let node = osc;
+  if(filterStart){
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(filterStart, t0);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(filterEnd,1), t0+duration);
+    osc.connect(filter);
+    node = filter;
+  }
+  node.connect(gain);
+  gain.connect(ctx.destination);
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(peakGain, t0+duration*0.15);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0+duration);
+  osc.start(t0);
+  osc.stop(t0+duration+0.02);
+}
+
+function playGrabSound(){
+  // "むちっ" - quick springy pop
+  playTone({startFreq:520, endFreq:220, duration:0.11, type:'triangle', peakGain:0.5, filterStart:1800, filterEnd:500});
+}
+
+function playDropSound(){
+  // "むにゅっ" - softer, slightly longer settle
+  playTone({startFreq:300, endFreq:130, duration:0.2, type:'sine', peakGain:0.4, filterStart:1200, filterEnd:300});
+}
+
+function playFanfare(){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  const now = ctx.currentTime;
+  const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
+  notes.forEach((freq,i)=>{
+    playTone({startFreq:freq, endFreq:freq, duration:0.32, type:'triangle', peakGain:0.3, startTime:i*0.11});
+  });
+  const chordTime = notes.length*0.11;
+  [1046.50, 1318.51].forEach(freq=>{ // C6 + E6 shimmer
+    playTone({startFreq:freq, endFreq:freq, duration:0.6, type:'triangle', peakGain:0.25, startTime:chordTime});
+  });
+}
+
 function doMove(from,to,record){
   const nut = pegs[from].pop();
   pegs[to].push(nut);
   if(record) history.push({from,to});
   moveCount++;
+  playDropSound();
 }
 
 function undo(){
@@ -797,6 +901,7 @@ function performMove(from, to){
 function showWinOverlay(){
   document.getElementById('clearSub').textContent = `レベル ${level} をクリアしました（手数: ${moveCount}）`;
   spawnConfetti();
+  playFanfare();
   document.getElementById('overlay').classList.add('show');
 }
 
@@ -830,6 +935,8 @@ function onPegPointerDown(e, idx){
     return;
   }
   if(pegs[idx].length === 0) return;
+
+  playGrabSound();
 
   const pegEl = e.currentTarget;
   interaction = {
@@ -1015,6 +1122,7 @@ function render(){
 
   fitBoard();
   saveState();
+  checkDeadlock();
 }
 
 // -- progress persistence: resume where you left off after closing the tab --
