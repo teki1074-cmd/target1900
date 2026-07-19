@@ -1306,7 +1306,7 @@ function randomTanukiScale(){
 function spawnTanukiFountain(){
   const overlay = document.getElementById('overlay');
   overlay.querySelectorAll('.tanuki-fountain').forEach(c=>c.remove());
-  const count = 10 + Math.floor(Math.random()*5);
+  const count = 10 + Math.floor(Math.random()*41); // 10-50
   for(let i=0;i<count;i++){
     const t = document.createElement('img');
     t.className = 'tanuki-fountain';
@@ -1348,58 +1348,68 @@ function pickTanukiMotion(){
   return entries[entries.length-1][0];
 }
 
+function spawnTanukiConfettiPiece(overlay){
+  const motion = pickTanukiMotion();
+  const c = document.createElement('img');
+  c.className = `confetti confetti-tanuki motion-${motion}`;
+  c.src = TANUKI_DATA_URI;
+  const scale = randomTanukiScale();
+  c.style.width = (170*scale) + 'px';
+  c.style.height = (210*scale) + 'px';
+  if(motion === 'grow'){
+    // stays centered on screen instead of falling from a random column
+    c.style.animationDuration = (1.9 + Math.random()*0.7) + 's';
+    c.style.animationDelay = (Math.random()*.4) + 's';
+  } else if(motion === 'fastspin'){
+    // spins in place rather than falling down the screen
+    c.style.top = (15 + Math.random()*55) + '%';
+    c.style.left = Math.random()*85 + '%';
+    c.style.animationDuration = (1.1 + Math.random()*0.6) + 's';
+    c.style.animationDelay = (Math.random()*.5) + 's';
+  } else if(motion === 'peek'){
+    // does nothing for 2s, then a bigger tanuki peeks in from the corner
+    // min stays the same; max is now 2x the old max (was 1.25x base, now 2.5x)
+    const peekScale = 0.95 + Math.random()*1.55;
+    c.style.width = (220*peekScale) + 'px';
+    c.style.height = (272*peekScale) + 'px';
+    c.style.animationDuration = '3.5s';
+    c.style.animationDelay = '0s';
+  } else {
+    if(motion === 'side' || motion === 'diagonal'){
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      const dist = 80 + Math.random()*140;
+      c.style.setProperty('--driftX', (dir*dist) + 'px');
+      c.style.setProperty('--dfx', (dir*dist) + 'px');
+      c.style.setProperty('--drot', (dir*(90+Math.random()*120)) + 'deg');
+    }
+    c.style.left = Math.random()*100 + '%';
+    c.style.animationDuration = (1.4 + Math.random()*1.4) + 's';
+    c.style.animationDelay = (Math.random()*.6) + 's';
+  }
+  overlay.appendChild(c);
+}
+
 function spawnConfetti(){
   const overlay = document.getElementById('overlay');
   overlay.querySelectorAll('.confetti').forEach(c=>c.remove());
+
   for(let i=0;i<28;i++){
-    const isTanuki = Math.random() < 0.12;
-    const c = document.createElement(isTanuki ? 'img' : 'div');
-    if(isTanuki){
-      const motion = pickTanukiMotion();
-      c.className = `confetti confetti-tanuki motion-${motion}`;
-      c.src = TANUKI_DATA_URI;
-      const scale = randomTanukiScale();
-      c.style.width = (170*scale) + 'px';
-      c.style.height = (210*scale) + 'px';
-      if(motion === 'grow'){
-        // stays centered on screen instead of falling from a random column
-        c.style.animationDuration = (1.9 + Math.random()*0.7) + 's';
-        c.style.animationDelay = (Math.random()*.4) + 's';
-      } else if(motion === 'fastspin'){
-        // spins in place rather than falling down the screen
-        c.style.top = (15 + Math.random()*55) + '%';
-        c.style.left = Math.random()*85 + '%';
-        c.style.animationDuration = (1.1 + Math.random()*0.6) + 's';
-        c.style.animationDelay = (Math.random()*.5) + 's';
-      } else if(motion === 'peek'){
-        // does nothing for 2s, then a bigger tanuki peeks in from the corner
-        // min stays the same; max is now 2x the old max (was 1.25x base, now 2.5x)
-        const peekScale = 0.95 + Math.random()*1.55;
-        c.style.width = (220*peekScale) + 'px';
-        c.style.height = (272*peekScale) + 'px';
-        c.style.animationDuration = '3.5s';
-        c.style.animationDelay = '0s';
-      } else {
-        if(motion === 'side' || motion === 'diagonal'){
-          const dir = Math.random() < 0.5 ? -1 : 1;
-          const dist = 80 + Math.random()*140;
-          c.style.setProperty('--driftX', (dir*dist) + 'px');
-          c.style.setProperty('--dfx', (dir*dist) + 'px');
-          c.style.setProperty('--drot', (dir*(90+Math.random()*120)) + 'deg');
-        }
-        c.style.left = Math.random()*100 + '%';
-        c.style.animationDuration = (1.4 + Math.random()*1.4) + 's';
-        c.style.animationDelay = (Math.random()*.6) + 's';
-      }
-    } else {
-      c.className = 'confetti';
-      const col = PALETTE[Math.floor(Math.random()*PALETTE.length)];
-      c.style.background = col.light;
-      c.style.left = Math.random()*100 + '%';
-      c.style.animationDuration = (1.4 + Math.random()*1.2) + 's';
-      c.style.animationDelay = (Math.random()*.6) + 's';
-    }
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    const col = PALETTE[Math.floor(Math.random()*PALETTE.length)];
+    c.style.background = col.light;
+    c.style.left = Math.random()*100 + '%';
+    c.style.animationDuration = (1.4 + Math.random()*1.2) + 's';
+    c.style.animationDelay = (Math.random()*.6) + 's';
     overlay.appendChild(c);
+  }
+
+  // tanuki count is rolled on its own (1-20) instead of being an incidental
+  // side effect of the confetti-square count, so the celebration reliably
+  // has a decent number of them rather than sometimes just one or two.
+  const tanukiCount = 1 + Math.floor(Math.random()*20);
+  for(let i=0;i<tanukiCount;i++){
+    spawnTanukiConfettiPiece(overlay);
   }
 }
 
