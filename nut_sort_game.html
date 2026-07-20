@@ -1306,7 +1306,7 @@ function showWinOverlay(){
   const winCard = document.getElementById('winCard');
   winCard.classList.remove('reveal');
   const bgImg = document.getElementById('winBgImage');
-  if(Math.random() < 1.00){
+  if(Math.random() < 0.25){
     const pick = WIN_BG_IMAGES[Math.floor(Math.random()*WIN_BG_IMAGES.length)];
     bgImg.style.backgroundImage = "url('" + pick + "')";
     bgImg.classList.add('show');
