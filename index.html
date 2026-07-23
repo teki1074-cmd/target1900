@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>アバターを育てよう</title>
+<script src="shared/points.js"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d1117; --card-bg:#161b22; --surface:#21262d; --border:#30363d;
+    --accent:#58a6ff; --gold:#e3b341; --text:#e6edf3; --muted:#8b949e;
+  }
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",'Noto Sans JP',sans-serif;
+    height:100dvh; display:flex; flex-direction:column; align-items:center;
+    padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 10px);
+    -webkit-tap-highlight-color:transparent; overflow:hidden;
+  }
+  h1{flex:0 0 auto; font-size:14px; font-weight:700; color:var(--muted); letter-spacing:1px; margin-bottom:8px}
+
+  #pointsBar{
+    flex:0 0 auto; display:flex; align-items:center; gap:6px; background:var(--surface);
+    border:1px solid var(--border); border-radius:999px; padding:6px 16px 6px 10px;
+    font-weight:700; font-size:15px; margin-bottom:10px;
+  }
+  #pointsBar .coin{font-size:18px}
+  #pointsVal{color:var(--gold); font-variant-numeric:tabular-nums}
+
+  #avatarCard{
+    flex:1 1 0; min-height:80px; width:100%; max-width:680px; border-radius:28px;
+    background:radial-gradient(circle at 50% 30%, #1c2433, var(--card-bg));
+    border:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  #avatarImg{ width:92%; height:92%; object-fit:contain; display:none; }
+  #avatarFallback{ color:var(--muted); font-size:13px; text-align:center; padding:0 20px; display:none; }
+
+  #viewingNote{ flex:0 0 auto; font-size:12px; color:var(--accent); margin-top:8px; min-height:15px; text-align:center }
+  #backToNowBtn{
+    flex:0 0 auto; display:none; margin-top:2px; background:none; border:none; color:var(--accent);
+    font-size:12px; text-decoration:underline; cursor:pointer; font-family:inherit;
+  }
+
+  #stageName{flex:0 0 auto; font-size:17px; font-weight:800; margin-top:6px}
+
+  #growWrap{ flex:0 0 auto; width:100%; max-width:680px; margin-top:8px }
+  #growTrack{ height:7px; border-radius:999px; background:var(--surface); border:1px solid var(--border); overflow:hidden }
+  #growFill{ height:100%; background:linear-gradient(90deg,var(--accent),var(--gold)); width:0%; transition:width .4s ease }
+  #growLabel{ font-size:11px; color:var(--muted); margin-top:5px; text-align:center }
+
+  #gallery{ flex:0 0 auto; display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; justify-content:center; max-width:340px }
+  #gallery button{
+    width:44px; height:44px; border-radius:10px; padding:0; overflow:hidden;
+    background:var(--surface); border:1px solid var(--border); cursor:pointer;
+  }
+  #gallery button.active{ border-color:var(--accent); box-shadow:0 0 0 2px rgba(88,166,255,.35) inset }
+  #gallery button img{ width:100%; height:100%; object-fit:contain }
+
+  #nav{ flex:0 0 auto; width:100%; max-width:340px; margin-top:12px; display:flex; flex-direction:column; gap:8px }
+  #nav a{
+    display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text);
+    background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:10px 14px;
+  }
+  #nav a .ic{font-size:22px}
+  #nav a .tt{font-size:14px; font-weight:700}
+  #nav a .sb{font-size:11px; color:var(--muted); margin-top:1px}
+  #nav a:active{ background:var(--surface) }
+</style>
+</head>
+<body>
+
+<h1>MY AVATAR</h1>
+
+<div id="pointsBar"><span class="coin">🪙</span>累計ポイント: <span id="pointsVal">0</span></div>
+
+<div id="avatarCard">
+  <img id="avatarImg" alt="アバター">
+  <div id="avatarFallback">画像を読み込めません</div>
+</div>
+
+<div id="viewingNote"></div>
+<button id="backToNowBtn">▶ 今の姿にもどる</button>
+
+<div id="stageName">たまご</div>
+
+<div id="growWrap">
+  <div id="growTrack"><div id="growFill"></div></div>
+  <div id="growLabel"></div>
+</div>
+
+<div id="gallery"></div>
+
+<div id="nav">
+  <a href="vocab.html">
+    <div class="ic">📖</div>
+    <div><div class="tt">単語帳＆クイズ</div><div class="sb">TARGET 1900 - 正解する度にpt獲得</div></div>
+  </a>
+  <a href="nut_sort_game.html">
+    <div class="ic">🎱</div>
+    <div><div class="tt">ボールそろえパズル</div><div class="sb">レベルをクリアしてpt獲得</div></div>
+  </a>
+</div>
+
+<script>
+/* 段階ごとに3枚(a/b/c)をパラパラ漫画のように表示する。
+   画像が増えたら STAGES と THRESHOLDS に追記するだけで拡張できる。 */
+const STAGES = [
+  {name:'ステージ0', frames:['stage0_a.webp','stage0_b.webp','stage0_c.webp']},
+  {name:'ステージ1', frames:['stage1_a.webp','stage1_b.webp','stage1_c.webp']},
+  {name:'ステージ2', frames:['stage2_a.webp','stage2_b.webp','stage2_c.webp']},
+  {name:'ステージ3', frames:['stage3_a.webp','stage3_b.webp','stage3_c.webp']},
+];
+const THRESHOLDS = [0, 140, 440, 1040]; // 累計ptでその段階に到達
+const FRAME_MS = 3000;
+
+const pointsVal = document.getElementById('pointsVal');
+const avatarImg = document.getElementById('avatarImg');
+const avatarFallback = document.getElementById('avatarFallback');
+const viewingNote = document.getElementById('viewingNote');
+const backToNowBtn = document.getElementById('backToNowBtn');
+const stageNameEl = document.getElementById('stageName');
+const growFill = document.getElementById('growFill');
+const growLabel = document.getElementById('growLabel');
+const galleryEl = document.getElementById('gallery');
+
+let animTimer = null;
+let viewingIndex = 0;
+
+function stageIndexFromTotal(total){
+  let idx = 0;
+  for(let i=0;i<THRESHOLDS.length;i++){ if(total>=THRESHOLDS[i]) idx=i; }
+  return idx;
+}
+
+function playStage(idx){
+  clearInterval(animTimer);
+  viewingIndex = idx;
+  const frames = STAGES[idx].frames.map(f=>'avatar/'+f);
+  let i=0;
+  const showFrame=()=>{
+    avatarImg.onload=()=>{ avatarImg.style.display='block'; avatarFallback.style.display='none'; };
+    avatarImg.onerror=()=>{ avatarImg.style.display='none'; avatarFallback.style.display='block'; };
+    avatarImg.src = frames[i];
+    i = (i+1) % frames.length;
+  };
+  showFrame();
+  animTimer = setInterval(showFrame, FRAME_MS);
+}
+
+function render(){
+  const s = AvatarPoints.load();
+  pointsVal.textContent = s.total;
+  const currentIdx = stageIndexFromTotal(s.total);
+
+  if(!animTimer) playStage(currentIdx); // 初回表示は必ず「今の姿」から
+
+  // ギャラリー(解放済みの段階を一覧表示)
+  galleryEl.innerHTML = '';
+  for(let i=0;i<=currentIdx;i++){
+    const b = document.createElement('button');
+    b.className = i===viewingIndex ? 'active' : '';
+    b.innerHTML = `<img src="avatar/${STAGES[i].frames[0]}" alt="${STAGES[i].name}">`;
+    b.onclick = () => { playStage(i); updateInfo(currentIdx); };
+    galleryEl.appendChild(b);
+  }
+
+  updateInfo(currentIdx);
+}
+
+function updateInfo(currentIdx){
+  stageNameEl.textContent = STAGES[viewingIndex].name;
+  [...galleryEl.children].forEach((b,i)=>b.classList.toggle('active', i===viewingIndex));
+
+  if(viewingIndex !== currentIdx){
+    viewingNote.textContent = '過去の姿を見ています';
+    backToNowBtn.style.display = 'inline';
+  }else{
+    viewingNote.textContent = '';
+    backToNowBtn.style.display = 'none';
+  }
+
+  const s = AvatarPoints.load();
+  if(currentIdx >= THRESHOLDS.length-1){
+    growLabel.textContent = `累計 ${s.total} pt（現在が最大の姿です）`;
+    growFill.style.width = '100%';
+  }else{
+    const cur = THRESHOLDS[currentIdx], next = THRESHOLDS[currentIdx+1];
+    const pct = Math.min(100, Math.round((s.total-cur)/(next-cur)*100));
+    growFill.style.width = pct + '%';
+    growLabel.textContent = `次の姿「${STAGES[currentIdx+1].name}」まで あと ${next-s.total} pt`;
+  }
+}
+
+backToNowBtn.onclick = () => {
+  const currentIdx = stageIndexFromTotal(AvatarPoints.load().total);
+  playStage(currentIdx);
+  updateInfo(currentIdx);
+};
+
+render();
+</script>
+</body>
+</html>
